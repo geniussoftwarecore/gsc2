@@ -80,107 +80,186 @@ export default function MobileDetail() {
   const [selectedAppForDetails, setSelectedAppForDetails] = useState<any>(null);
   const [showAppDetailsModal, setShowAppDetailsModal] = useState(false);
 
+  // App Categories Definition
+  const getAppCategories = () => [
+    { id: 'all', name: lang === 'ar' ? 'جميع الأنواع' : 'All Types' },
+    { id: 'ecommerce', name: lang === 'ar' ? 'تجارة إلكترونية' : 'E-commerce' },
+    { id: 'services', name: lang === 'ar' ? 'خدمات عند الطلب' : 'On-Demand Services' },
+    { id: 'education', name: lang === 'ar' ? 'تعليم' : 'Education' },
+    { id: 'health', name: lang === 'ar' ? 'صحة' : 'Healthcare' },
+    { id: 'fintech', name: lang === 'ar' ? 'مالية/مدفوعات' : 'Fintech/Payments' },
+    { id: 'logistics', name: lang === 'ar' ? 'توصيل/نقل' : 'Logistics/Transport' },
+    { id: 'media', name: lang === 'ar' ? 'وسائط/ترفيه' : 'Media/Entertainment' }
+  ];
+
   // Mobile Apps Data
   const getMobileApps = () => [
-    // System Optimization Apps
+    // E-commerce Apps
     {
-      name: "مُحسن نظام الأندرويد",
-      description: "تطبيق متقدم لتحسين أداء نظام الأندرويد وحل المشاكل الشائعة",
-      features: ["تنظيف ذاكرة التخزين المؤقت", "إدارة الذاكرة الذكية", "تسريع الجهاز", "إصلاح أخطاء النظام", "توفير البطارية"],
-      category: "system"
+      id: 'ec1',
+      name: lang === 'ar' ? "متجر إلكتروني متعدد البائعين" : "Multi-Vendor E-commerce Store",
+      description: lang === 'ar' ? "تحويل البيع إلى أونلاين مع إدارة مخزون ودفع آمن" : "Transform sales online with inventory management and secure payments",
+      features: lang === 'ar' ? ["سلة شراء متقدمة", "بوابات دفع محلية وعالمية", "كوبونات وعروض", "تقارير المبيعات", "دعم عربي/إنجليزي"] : ["Advanced Shopping Cart", "Local & Global Payment Gateways", "Coupons & Offers", "Sales Reports", "Arabic/English Support"],
+      category: "ecommerce",
+      tag: "Enterprise"
     },
     {
-      name: "Android System Optimizer",
-      description: "Advanced app for optimizing Android system performance and fixing common issues",
-      features: ["Cache Cleaner", "Smart Memory Management", "Device Speed Booster", "System Error Fixes", "Battery Saver"],
-      category: "system"
+      id: 'ec2',
+      name: lang === 'ar' ? "متجر D2C سريع الإطلاق (MVP)" : "Quick Launch D2C Store (MVP)",
+      description: lang === 'ar' ? "أطلق متجرك خلال أسابيع" : "Launch your store within weeks",
+      features: lang === 'ar' ? ["قوالب جاهزة", "دفع آمن", "ربط شحن", "إشعارات فورية"] : ["Ready Templates", "Secure Payment", "Shipping Integration", "Instant Notifications"],
+      category: "ecommerce",
+      tag: "MVP"
     },
     {
-      name: "مُصلح مشاكل iOS",
-      description: "أداة شاملة لحل مشاكل نظام iOS وتحسين الأداء",
-      features: ["إصلاح تجمد الشاشة", "حل مشاكل التطبيقات", "تحسين سرعة النظام", "إدارة التخزين", "إصلاح أخطاء التحديث"],
-      category: "system"
-    },
-    {
-      name: "iOS Problem Solver",
-      description: "Comprehensive tool for solving iOS system issues and improving performance",
-      features: ["Screen Freeze Fix", "App Crash Solutions", "System Speed Enhancement", "Storage Management", "Update Error Fixes"],
-      category: "system"
-    },
-    {
-      name: "منظف الهاتف الذكي",
-      description: "تطبيق قوي لتنظيف وتحسين هواتف الأندرويد والايفون",
-      features: ["إزالة الملفات المؤقتة", "تنظيف الصور المكررة", "إدارة التطبيقات غير المستخدمة", "تحسين الذاكرة", "حماية الخصوصية"],
-      category: "system"
-    },
-    {
-      name: "Smart Phone Cleaner",
-      description: "Powerful app for cleaning and optimizing Android and iPhone devices",
-      features: ["Temp Files Removal", "Duplicate Photos Cleaner", "Unused Apps Manager", "Memory Optimization", "Privacy Protection"],
-      category: "system"
-    },
-    {
-      name: "حارس البطارية الذكي",
-      description: "تطبيق متطور لإدارة البطارية وتوفير الطاقة في الهواتف الذكية",
-      features: ["مراقبة استهلاك البطارية", "أوضاع الطاقة الذكية", "تحليل التطبيقات المستهلكة", "جدولة الشحن", "تنبيهات البطارية"],
-      category: "system"
-    },
-    {
-      name: "Smart Battery Guard",
-      description: "Advanced app for battery management and power saving in smartphones",
-      features: ["Battery Usage Monitor", "Smart Power Modes", "Power-Hungry Apps Analysis", "Charging Schedule", "Battery Alerts"],
-      category: "system"
-    },
-    // Existing apps...
-    {
-      name: "تطبيق توصيل طعام",
-      description: "منصة توصيل طعام متكاملة مع تتبع مباشر وتجربة استخدام استثنائية",
-      features: ["قوائم طعام تفاعلية", "تخصيص الطلبات", "تتبع GPS للتوصيل", "طرق دفع متعددة", "تقييم المطاعم والسائقين"],
+      id: 'ec3',
+      name: lang === 'ar' ? "تطبيق توصيل طعام" : "Food Delivery App",
+      description: lang === 'ar' ? "منصة توصيل طعام متكاملة مع تتبع مباشر" : "Complete food delivery platform with live tracking",
+      features: lang === 'ar' ? ["قوائم طعام تفاعلية", "تتبع GPS للتوصيل", "طرق دفع متعددة", "تقييم المطاعم"] : ["Interactive Food Menus", "GPS Delivery Tracking", "Multiple Payment Methods", "Restaurant Reviews"],
       category: "ecommerce"
     },
+    // Services Apps
     {
-      name: "Food Delivery", 
-      description: "Food ordering and delivery platform with live tracking and exceptional user experience",
-      features: ["Interactive Food Menus", "Order Customization", "GPS Delivery Tracking", "Multiple Payment Methods", "Restaurant & Driver Rating"],
-      category: "ecommerce"
+      id: 'sv1',
+      name: lang === 'ar' ? "طلب خدمات عند الطلب" : "On-Demand Services App",
+      description: lang === 'ar' ? "حجوزات وفوترة وتتبع مزودين" : "Bookings, billing and service provider tracking",
+      features: lang === 'ar' ? ["خرائط وتتبع", "مواعيد ودفعات", "مراجعات العملاء", "إدارة المقدمين"] : ["Maps & Tracking", "Appointments & Payments", "Customer Reviews", "Provider Management"],
+      category: "services"
     },
     {
-      name: "المحاسبة الشخصية",
-      description: "تطبيق ذكي لإدارة الأموال والمصروفات الشخصية مع تحليل مالي متقدم",
-      features: ["تتبع المصروفات التلقائي", "إنشاء ميزانيات ذكية", "تصنيف المعاملات", "تقارير مالية مفصلة", "تنبيهات الميزانية"],
-      category: "finance"
+      id: 'sv2',
+      name: lang === 'ar' ? "تطبيق صيانة منزلية" : "Home Maintenance App",
+      description: lang === 'ar' ? "خدمات إصلاح وصيانة منزلية بنقرة واحدة" : "One-click home repair and maintenance services",
+      features: lang === 'ar' ? ["فنيين معتمدين", "تسعير شفاف", "ضمان الخدمة", "تقييم الأداء"] : ["Certified Technicians", "Transparent Pricing", "Service Guarantee", "Performance Rating"],
+      category: "services"
+    },
+    // Education Apps
+    {
+      id: 'ed1',
+      name: lang === 'ar' ? "تعلم إلكتروني" : "E-Learning Platform",
+      description: lang === 'ar' ? "كورسات، اختبارات، شهادات" : "Courses, exams, certificates",
+      features: lang === 'ar' ? ["بث مباشر", "اختبارات تفاعلية", "لوحة مدرس", "شهادات معتمدة"] : ["Live Streaming", "Interactive Exams", "Teacher Dashboard", "Certified Certificates"],
+      category: "education"
     },
     {
-      name: "Personal Finance",
-      description: "Smart personal money and expense management app with advanced financial analytics", 
-      features: ["Automatic Expense Tracking", "Smart Budget Creation", "Transaction Categorization", "Detailed Financial Reports", "Budget Alerts"],
-      category: "finance"
+      id: 'ed2',
+      name: lang === 'ar' ? "مدرسة افتراضية" : "Virtual School",
+      description: lang === 'ar' ? "منصة تعليمية شاملة للطلاب والمعلمين" : "Comprehensive educational platform for students and teachers",
+      features: lang === 'ar' ? ["فصول افتراضية", "مكتبة رقمية", "تقييم مستمر", "تواصل أولياء الأمور"] : ["Virtual Classrooms", "Digital Library", "Continuous Assessment", "Parent Communication"],
+      category: "education"
     },
     {
-      name: "متابعة صحية",
-      description: "تطبيق ذكي لمراقبة الصحة اليومية وتتبع العادات الصحية",
-      features: ["تتبع الأعراض اليومية", "تذكير بالأدوية", "مراقبة العلامات الحيوية", "يوميات صحية", "تقارير طبية"],
-      category: "healthcare"
+      id: 'ed3',
+      name: lang === 'ar' ? "تطبيق تعلم اللغات" : "Language Learning App",
+      description: lang === 'ar' ? "تعلم اللغات بطريقة تفاعلية وممتعة" : "Learn languages interactively and fun",
+      features: lang === 'ar' ? ["دروس صوتية", "ألعاب تعليمية", "محادثات AI", "تتبع التقدم"] : ["Audio Lessons", "Educational Games", "AI Conversations", "Progress Tracking"],
+      category: "education"
+    },
+    // Health Apps
+    {
+      id: 'he1',
+      name: lang === 'ar' ? "عيادة عن بُعد" : "Telemedicine Clinic",
+      description: lang === 'ar' ? "مواعيد، وصفات، سجلات" : "Appointments, prescriptions, records",
+      features: lang === 'ar' ? ["مكالمات فيديو", "وصفات PDF", "سجلات مشفرة", "تذكير بالأدوية"] : ["Video Calls", "PDF Prescriptions", "Encrypted Records", "Medicine Reminders"],
+      category: "health"
     },
     {
-      name: "Health Monitoring",
-      description: "Smart app for daily health monitoring and tracking healthy habits",
-      features: ["Daily Symptom Tracking", "Medication Reminders", "Vital Signs Monitoring", "Health Diary", "Medical Reports"],
-      category: "healthcare"
+      id: 'he2',
+      name: lang === 'ar' ? "متابعة صحية" : "Health Monitoring",
+      description: lang === 'ar' ? "تطبيق ذكي لمراقبة الصحة اليومية" : "Smart app for daily health monitoring",
+      features: lang === 'ar' ? ["تتبع الأعراض", "مراقبة العلامات الحيوية", "يوميات صحية", "تقارير طبية"] : ["Symptom Tracking", "Vital Signs Monitoring", "Health Diary", "Medical Reports"],
+      category: "health"
     },
     {
-      name: "Social Media Manager",
-      description: "Comprehensive platform for managing social media accounts with advanced analytics tools",
-      features: ["Multi-Account Management", "Post Scheduling", "Performance Analytics", "Comment Management", "Detailed Reports"],
-      category: "marketing"
+      id: 'he3',
+      name: lang === 'ar' ? "تطبيق لياقة بدنية" : "Fitness Tracker App",
+      description: lang === 'ar' ? "تتبع التمارين والتغذية والأهداف الصحية" : "Track workouts, nutrition and health goals",
+      features: lang === 'ar' ? ["برامج تدريب", "تتبع السعرات", "تحديات يومية", "مدرب شخصي AI"] : ["Training Programs", "Calorie Tracking", "Daily Challenges", "AI Personal Trainer"],
+      category: "health"
+    },
+    // Fintech Apps
+    {
+      id: 'fi1',
+      name: lang === 'ar' ? "محفظة ومدفوعات" : "Digital Wallet & Payments",
+      description: lang === 'ar' ? "تحصيل وسداد آمن" : "Secure collection and payments",
+      features: lang === 'ar' ? ["KYC", "تقارير مالية", "تصاريح دقيقة", "أمان متقدم"] : ["KYC", "Financial Reports", "Precise Authorizations", "Advanced Security"],
+      category: "fintech"
     },
     {
-      name: "حملات إعلانية",
-      description: "تطبيق شامل لإدارة وتشغيل الحملات الإعلانية الرقمية بكفاءة عالية",
-      features: ["إنشاء حملات متعددة المنصات", "استهداف الجمهور الذكي", "تحليل الأداء المتقدم", "إدارة الميزانيات", "تقارير مفصلة في الوقت الفعلي"],
-      category: "marketing"
+      id: 'fi2',
+      name: lang === 'ar' ? "المحاسبة الشخصية" : "Personal Finance",
+      description: lang === 'ar' ? "تطبيق ذكي لإدارة الأموال والمصروفات" : "Smart personal money and expense management",
+      features: lang === 'ar' ? ["تتبع المصروفات التلقائي", "إنشاء ميزانيات ذكية", "تصنيف المعاملات", "تقارير مالية مفصلة"] : ["Automatic Expense Tracking", "Smart Budget Creation", "Transaction Categorization", "Detailed Financial Reports"],
+      category: "fintech"
+    },
+    {
+      id: 'fi3',
+      name: lang === 'ar' ? "تطبيق تحويلات مالية" : "Money Transfer App",
+      description: lang === 'ar' ? "تحويلات آمنة وسريعة محلياً وعالمياً" : "Secure and fast local and international transfers",
+      features: lang === 'ar' ? ["تحويل فوري", "أسعار تنافسية", "تتبع التحويلات", "دعم عملات متعددة"] : ["Instant Transfer", "Competitive Rates", "Transfer Tracking", "Multi-currency Support"],
+      category: "fintech"
+    },
+    // Logistics Apps
+    {
+      id: 'lg1',
+      name: lang === 'ar' ? "توصيل طلبات" : "Package Delivery",
+      description: lang === 'ar' ? "أسطول وتتبع حي" : "Fleet and live tracking",
+      features: lang === 'ar' ? ["خرائط حية", "مسارات ذكية", "إثبات التسليم", "إدارة السائقين"] : ["Live Maps", "Smart Routes", "Delivery Proof", "Driver Management"],
+      category: "logistics"
+    },
+    {
+      id: 'lg2',
+      name: lang === 'ar' ? "إدارة مخازن" : "Warehouse Management",
+      description: lang === 'ar' ? "نظام ذكي لإدارة المخزون والشحن" : "Smart system for inventory and shipping management",
+      features: lang === 'ar' ? ["تتبع المخزون", "إدارة الطلبات", "تحليل المبيعات", "تقارير فورية"] : ["Inventory Tracking", "Order Management", "Sales Analytics", "Real-time Reports"],
+      category: "logistics"
+    },
+    {
+      id: 'lg3',
+      name: lang === 'ar' ? "تطبيق نقل ركاب" : "Ride Sharing App",
+      description: lang === 'ar' ? "نقل آمن ومريح في المدينة" : "Safe and comfortable city transportation",
+      features: lang === 'ar' ? ["حجز فوري", "تتبع الرحلة", "دفع رقمي", "تقييم السائقين"] : ["Instant Booking", "Trip Tracking", "Digital Payment", "Driver Rating"],
+      category: "logistics"
+    },
+    // Media Apps
+    {
+      id: 'md1',
+      name: lang === 'ar' ? "منصة محتوى" : "Content Platform",
+      description: lang === 'ar' ? "فيديو وبث وتفاعل" : "Video, streaming and interaction",
+      features: lang === 'ar' ? ["رفع وسائط", "تعليقات", "تنبيهات Push", "بث مباشر"] : ["Media Upload", "Comments", "Push Notifications", "Live Streaming"],
+      category: "media"
+    },
+    {
+      id: 'md2',
+      name: lang === 'ar' ? "تطبيق بودكاست" : "Podcast App",
+      description: lang === 'ar' ? "منصة بودكاست عربية متكاملة" : "Complete Arabic podcast platform",
+      features: lang === 'ar' ? ["تشغيل أوف لاين", "قوائم تشغيل", "تحميل حلقات", "إحصائيات مفصلة"] : ["Offline Playback", "Playlists", "Episode Downloads", "Detailed Analytics"],
+      category: "media"
+    },
+    {
+      id: 'md3',
+      name: lang === 'ar' ? "تطبيق تحرير فيديو" : "Video Editing App",
+      description: lang === 'ar' ? "أدوات تحرير احترافية للهواتف الذكية" : "Professional editing tools for smartphones",
+      features: lang === 'ar' ? ["فلاتر متقدمة", "مؤثرات صوتية", "تصدير HD", "مشاركة سحابية"] : ["Advanced Filters", "Audio Effects", "HD Export", "Cloud Sharing"],
+      category: "media"
+    },
+    {
+      id: 'md4',
+      name: lang === 'ar' ? "شبكة اجتماعية" : "Social Network",
+      description: lang === 'ar' ? "منصة تواصل اجتماعي مبتكرة" : "Innovative social networking platform",
+      features: lang === 'ar' ? ["محتوى تفاعلي", "مجموعات مهتمة", "مشاركة لحظية", "أمان متقدم"] : ["Interactive Content", "Interest Groups", "Instant Sharing", "Advanced Security"],
+      category: "media"
     }
   ];
+
+  // Filter apps based on selected category
+  const getFilteredApps = () => {
+    const apps = getMobileApps();
+    if (selectedAppCategory === 'all') {
+      return apps;
+    }
+    return apps.filter(app => app.category === selectedAppCategory);
+  };
 
   const getDetailedAppInfo = (appName: string) => {
     const appDetails = {
