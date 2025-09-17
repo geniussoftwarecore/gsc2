@@ -401,41 +401,119 @@ export default function MobileDetail() {
     return appDetails[appName as keyof typeof appDetails];
   };
 
-  const getAppCategories = () => [
-    { id: "all", name: dir === 'rtl' ? "جميع التطبيقات" : "All Apps" },
-    { id: "system", name: dir === 'rtl' ? "تحسين الأنظمة" : "System Optimization" },
-    { id: "ecommerce", name: dir === 'rtl' ? "التجارة الإلكترونية" : "E-commerce" },
-    { id: "finance", name: dir === 'rtl' ? "المالية" : "Finance" },
-    { id: "healthcare", name: dir === 'rtl' ? "الصحة" : "Healthcare" },
-    { id: "marketing", name: dir === 'rtl' ? "التسويق" : "Marketing" }
-  ];
-
-  const getFilteredApps = () => {
-    const apps = getMobileApps();
-    if (selectedAppCategory === "all") return apps;
-    return apps.filter(app => app.category === selectedAppCategory);
-  };
 
   useEffect(() => {
-    const loadMobileServiceData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/locales/${lang}/services.mobile.json`);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to load mobile service data: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        setMobileData(data);
-      } catch (err) {
-        console.error('Failed to load mobile service data:', err);
-      } finally {
-        setLoading(false);
+    // Mobile service data - inline to match requirements
+    const mobileServiceData: MobileServiceData = {
+      hero: {
+        title: lang === 'ar' ? 'تطوير تطبيقات الهواتف الذكية' : 'Mobile App Development',
+        subtitle: lang === 'ar' ? 'تطبيقات احترافية لنظامي iOS و Android' : 'Professional iOS & Android Applications',
+        description: lang === 'ar' 
+          ? 'نطور تطبيقات الهواتف المحمولة الاحترافية والسريعة الاستجابة لأنظمة iOS وAndroid باستخدام أحدث التقنيات والمعايير العالمية لضمان أفضل تجربة للمستخدمين.'
+          : 'We develop professional and responsive mobile applications for iOS and Android using the latest technologies and global standards to ensure the best user experience.',
+        primaryCta: lang === 'ar' ? 'ابدأ مشروعك الآن' : 'Start Your Project Now',
+        secondaryCta: lang === 'ar' ? 'استشارة مجانية' : 'Free Consultation'
+      },
+      features: {
+        title: lang === 'ar' ? 'المميزات الأساسية' : 'Core Features',
+        items: [
+          {
+            icon: 'code',
+            title: lang === 'ar' ? 'تطوير احترافي' : 'Professional Development',
+            desc: lang === 'ar' ? 'كود نظيف وقابل للصيانة' : 'Clean and maintainable code'
+          },
+          {
+            icon: 'mobile',
+            title: lang === 'ar' ? 'تصميم متجاوب' : 'Responsive Design',
+            desc: lang === 'ar' ? 'واجهات تتكيف مع جميع الأحجام' : 'Interfaces that adapt to all sizes'
+          },
+          {
+            icon: 'shield',
+            title: lang === 'ar' ? 'أمان متقدم' : 'Advanced Security',
+            desc: lang === 'ar' ? 'حماية بيانات المستخدمين' : 'User data protection'
+          }
+        ]
+      },
+      useCases: {
+        title: lang === 'ar' ? 'حالات الاستخدام' : 'Use Cases',
+        items: lang === 'ar' 
+          ? ['التجارة الإلكترونية', 'التعليم الإلكتروني', 'الخدمات الصحية', 'الخدمات المالية']
+          : ['E-commerce', 'E-learning', 'Healthcare Services', 'Financial Services']
+      },
+      integrations: {
+        title: lang === 'ar' ? 'التكاملات' : 'Integrations',
+        items: lang === 'ar'
+          ? ['بوابات الدفع', 'خدمات السحابة', 'التحليلات', 'الإشعارات']
+          : ['Payment Gateways', 'Cloud Services', 'Analytics', 'Notifications']
+      },
+      tech: {
+        title: lang === 'ar' ? 'التقنيات المستخدمة' : 'Technologies Used',
+        stack: ['React Native', 'Flutter', 'Swift', 'Kotlin', 'Firebase']
+      },
+      process: {
+        title: lang === 'ar' ? 'كيف نعمل' : 'How We Work',
+        steps: lang === 'ar'
+          ? [
+              'تحليل المتطلبات - نحلل احتياجاتك ونفهم أهدافك بدقة',
+              'التصميم وتجربة المستخدم - نصمم واجهات جذابة وسهلة الاستخدام',
+              'التطوير والتكامل - نبرمج التطبيق ونربطه بالخدمات المطلوبة',
+              'الاختبار والتسليم - نختبر بدقة ونسلم تطبيقاً جاهزاً للنشر'
+            ]
+          : [
+              'Requirements Analysis - We analyze your needs and understand your goals precisely',
+              'Design & User Experience - We design attractive and user-friendly interfaces',
+              'Development & Integration - We code the app and integrate it with required services',
+              'Testing & Delivery - We test thoroughly and deliver a ready-to-publish app'
+            ]
+      },
+      deliverables: {
+        title: lang === 'ar' ? 'ما ستحصل عليه' : 'What You Will Get',
+        items: lang === 'ar'
+          ? [
+              'الكود المصدري الكامل للتطبيق',
+              'دعم فني متواصل لضمان استمرارية العمل',
+              'تسليم في الوقت المحدد حسب الجدول المتفق عليه',
+              'الاختبارات والتقارير الشاملة لضمان الجودة',
+              'التدريب والدعم لفريقك لإدارة التطبيق',
+              'وثائق تقنية مفصلة',
+              'دليل المستخدم الشامل'
+            ]
+          : [
+              'Complete source code of the application',
+              'Continuous technical support to ensure business continuity',
+              'On-time delivery according to agreed schedule',
+              'Comprehensive testing and reports to ensure quality',
+              'Training and support for your team to manage the app',
+              'Detailed technical documentation',
+              'Comprehensive user guide'
+            ]
+      },
+      gettingStarted: {
+        title: lang === 'ar' ? 'كيفية البدء' : 'Getting Started',
+        items: lang === 'ar'
+          ? ['تواصل معنا', 'مناقشة المشروع', 'الحصول على عرض سعر', 'بدء التطوير']
+          : ['Contact Us', 'Discuss Project', 'Get Quote', 'Start Development']
+      },
+      cta: {
+        title: lang === 'ar' ? 'جاهز لبدء مشروعك؟' : 'Ready to Start Your Project?',
+        desc: lang === 'ar'
+          ? 'تواصل معنا اليوم واحصل على استشارة مجانية لتطوير تطبيقك المثالي'
+          : 'Contact us today and get a free consultation to develop your perfect app',
+        primary: lang === 'ar' ? 'ابدأ مشروعك الآن' : 'Start Your Project Now',
+        secondary: lang === 'ar' ? 'تصفح خدمات أخرى' : 'Browse Other Services'
+      },
+      seo: {
+        title: lang === 'ar' 
+          ? 'تطوير تطبيقات الهواتف الذكية - خدماتنا | Genius Software Core'
+          : 'Mobile App Development - Our Services | Genius Software Core',
+        description: lang === 'ar'
+          ? 'نطور تطبيقات الهواتف المحمولة الاحترافية لأنظمة iOS وAndroid. خدمات شاملة من التصميم إلى النشر مع دعم فني متواصل.'
+          : 'We develop professional mobile applications for iOS and Android. Comprehensive services from design to deployment with continuous technical support.'
       }
     };
 
-    loadMobileServiceData();
+    setMobileData(mobileServiceData);
+    setLoading(false);
   }, [lang]);
 
   if (loading) {
