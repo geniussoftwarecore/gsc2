@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Service } from "@shared/schema";
 import { 
   Code, 
   Palette, 
@@ -35,7 +36,7 @@ import {
 } from "lucide-react";
 
 interface ServicesGridProps {
-  services?: any[]; // Services data from API
+  services?: Service[]; // Services data from API
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   activeFilter: string;
@@ -50,29 +51,35 @@ interface ServicesGridProps {
   error?: string | null;
 }
 
-// Icon mapping for service categories
+// Icon mapping for service categories - Fixed to match API data
 const getIconForService = (iconName?: string) => {
   const iconMap: Record<string, any> = {
-    Globe,
-    Smartphone,
-    Boxes,
-    Workflow,
-    Bot,
-    Palette,
-    Cloud,
-    BarChartBig,
-    ShoppingCart,
-    LifeBuoy,
-    Code,
-    Settings,
-    Users
+    // API returns these exact values, map them to proper Lucide icons
+    "smartphone": Smartphone,
+    "code": Code,
+    "monitor": Monitor,
+    "brain-circuit": Brain, // Use Brain as fallback for brain-circuit since BrainCircuit might not exist
+    "palette": Palette,
+    "megaphone": Megaphone,
+    "brain": Brain,
+    "settings": Settings,
+    // Additional mappings for consistency
+    "globe": Globe,
+    "boxes": Boxes,
+    "workflow": Workflow,
+    "bot": Bot,
+    "cloud": Cloud,
+    "bar-chart": BarChartBig,
+    "shopping-cart": ShoppingCart,
+    "life-buoy": LifeBuoy,
+    "users": Users
   };
-  return iconMap[iconName || "Settings"] || Settings;
+  return iconMap[iconName || "settings"] || Settings;
 };
 
 // Compact Service Card Component
 interface ServiceCardProps {
-  service: any; // Service from API data
+  service: Service; // Service from API data
   index: number;
   dir: string;
 }
