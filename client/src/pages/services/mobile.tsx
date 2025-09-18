@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Smartphone, 
   ArrowRight, 
@@ -28,7 +32,16 @@ import {
   Play,
   Star,
   Monitor,
-  Tablet
+  Tablet,
+  User,
+  Mail,
+  Phone,
+  Building,
+  DollarSign,
+  Calendar,
+  MessageSquare,
+  X,
+  Send
 } from "lucide-react";
 import { SiAndroid, SiApple } from "react-icons/si";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -524,19 +537,57 @@ export default function MobileServicePage() {
     mutationFn: async () => {
       const formData = new FormData();
       
-      // Add project data
-      formData.append('appType', planningState.selectedAppType || '');
-      formData.append('features', JSON.stringify(planningState.selectedFeatures));
-      formData.append('specializations', JSON.stringify(planningState.selectedSpecializations));
-      formData.append('projectDetails', JSON.stringify(planningState.projectDetails));
-      formData.append('contactInfo', JSON.stringify(planningState.contactInfo));
+      // Add customer information
+      formData.append('customerName', planningState.contactInfo.name);
+      formData.append('customerEmail', planningState.contactInfo.email);
+      formData.append('customerPhone', planningState.contactInfo.phone);
+      if (planningState.contactInfo.company) {
+        formData.append('customerCompany', planningState.contactInfo.company);
+      }
       
-      // Add files
-      planningState.uploadedFiles.forEach((file, index) => {
-        formData.append(`file_${index}`, file);
+      // Add app details
+      formData.append('appType', planningState.selectedAppType || '');
+      if (planningState.projectDetails.appName) {
+        formData.append('appName', planningState.projectDetails.appName);
+      }
+      if (planningState.projectDetails.appDescription) {
+        formData.append('appDescription', planningState.projectDetails.appDescription);
+      }
+      
+      // Add selected features as JSON string
+      formData.append('selectedFeatures', JSON.stringify(planningState.selectedFeatures));
+      
+      // Add additional requirements
+      let additionalRequirements = planningState.projectDetails.additionalRequirements || '';
+      
+      // Add specializations and other details to additional requirements
+      if (planningState.selectedSpecializations.length > 0) {
+        const specializationNames = getSpecializations()
+          .filter(spec => planningState.selectedSpecializations.includes(spec.id))
+          .map(spec => spec.name);
+        additionalRequirements += `\n\nالتخصصات المختارة: ${specializationNames.join(', ')}`;
+      }
+      
+      if (planningState.projectDetails.targetAudience) {
+        additionalRequirements += `\n\nالجمهور المستهدف: ${planningState.projectDetails.targetAudience}`;
+      }
+      
+      formData.append('additionalRequirements', additionalRequirements);
+      
+      // Add budget and timeline
+      if (planningState.projectDetails.budget) {
+        formData.append('estimatedBudget', planningState.projectDetails.budget);
+      }
+      if (planningState.projectDetails.timeline) {
+        formData.append('preferredTimeline', planningState.projectDetails.timeline);
+      }
+      
+      // Add files as attachedFiles to match the API expectation
+      planningState.uploadedFiles.forEach((file) => {
+        formData.append('attachedFiles', file);
       });
 
-      const response = await fetch('/api/mobile-app-planning', {
+      const response = await fetch('/api/mobile-app-orders', {
         method: 'POST',
         body: formData
       });
@@ -1107,27 +1158,403 @@ export default function MobileServicePage() {
                   </div>
                 )}
 
-                {/* Steps 4, 5, 6 - Project Details, Files, Contact Info */}
-                {planningState.currentStep > 3 && (
-                  <div className="text-center py-20">
-                    <div className="max-w-md mx-auto space-y-6">
-                      <div className="w-20 h-20 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-                        <Monitor className="w-10 h-10 text-primary" />
+                {/* Step 4: Project Details */}
+                {planningState.currentStep === 4 && (
+                  <div className="space-y-8">
+                    <Alert>
+                      <FileText className="h-4 w-4" />
+                      <AlertDescription>
+                        {lang === 'ar' ? 'أخبرنا المزيد عن مشروعك وأهدافك. كلما زادت التفاصيل، كان بإمكاننا تقديم حل أفضل.' : 'Tell us more about your project and goals. The more details you provide, the better solution we can offer.'}
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="grid gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="app-name">
+                          {lang === 'ar' ? 'اسم التطبيق' : 'App Name'} <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="app-name"
+                          placeholder={lang === 'ar' ? 'أدخل اسم التطبيق المقترح' : 'Enter your proposed app name'}
+                          value={planningState.projectDetails.appName}
+                          onChange={(e) => setPlanningState(prev => ({
+                            ...prev,
+                            projectDetails: { ...prev.projectDetails, appName: e.target.value }
+                          }))}
+                          data-testid="input-app-name"
+                        />
                       </div>
-                      <h3 className="text-2xl font-bold text-gray-900">
-                        {lang === 'ar' ? 'قريباً' : 'Coming Soon'}
-                      </h3>
-                      <p className="text-gray-600">
-                        {lang === 'ar' ? 
-                          'باقي خطوات التخطيط قيد التطوير. يمكنك التواصل معنا مباشرة لإكمال طلبك.' : 
-                          'Remaining planning steps are under development. You can contact us directly to complete your request.'
-                        }
-                      </p>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="app-description">
+                          {lang === 'ar' ? 'وصف التطبيق' : 'App Description'} <span className="text-red-500">*</span>
+                        </Label>
+                        <Textarea
+                          id="app-description"
+                          placeholder={lang === 'ar' ? 'صف فكرة التطبيق وما يحققه للمستخدمين...' : 'Describe your app idea and what it achieves for users...'}
+                          value={planningState.projectDetails.appDescription}
+                          onChange={(e) => setPlanningState(prev => ({
+                            ...prev,
+                            projectDetails: { ...prev.projectDetails, appDescription: e.target.value }
+                          }))}
+                          rows={4}
+                          data-testid="textarea-app-description"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="target-audience">
+                          {lang === 'ar' ? 'الجمهور المستهدف' : 'Target Audience'} <span className="text-red-500">*</span>
+                        </Label>
+                        <Textarea
+                          id="target-audience"
+                          placeholder={lang === 'ar' ? 'من هم المستخدمون المستهدفون؟ (العمر، الاهتمامات، السلوك...)' : 'Who are your target users? (Age, interests, behavior...)'}
+                          value={planningState.projectDetails.targetAudience}
+                          onChange={(e) => setPlanningState(prev => ({
+                            ...prev,
+                            projectDetails: { ...prev.projectDetails, targetAudience: e.target.value }
+                          }))}
+                          rows={3}
+                          data-testid="textarea-target-audience"
+                        />
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="budget">
+                            {lang === 'ar' ? 'الميزانية المتوقعة' : 'Expected Budget'}
+                          </Label>
+                          <Select 
+                            value={planningState.projectDetails.budget}
+                            onValueChange={(value) => setPlanningState(prev => ({
+                              ...prev,
+                              projectDetails: { ...prev.projectDetails, budget: value }
+                            }))}
+                          >
+                            <SelectTrigger data-testid="select-budget">
+                              <SelectValue placeholder={lang === 'ar' ? 'اختر الميزانية' : 'Select budget range'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5k-10k">{lang === 'ar' ? '5,000 - 10,000 ريال' : '$1,300 - $2,700'}</SelectItem>
+                              <SelectItem value="10k-25k">{lang === 'ar' ? '10,000 - 25,000 ريال' : '$2,700 - $6,700'}</SelectItem>
+                              <SelectItem value="25k-50k">{lang === 'ar' ? '25,000 - 50,000 ريال' : '$6,700 - $13,300'}</SelectItem>
+                              <SelectItem value="50k+">{lang === 'ar' ? '50,000+ ريال' : '$13,300+'}</SelectItem>
+                              <SelectItem value="custom">{lang === 'ar' ? 'مخصص' : 'Custom'}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="timeline">
+                            {lang === 'ar' ? 'الإطار الزمني المطلوب' : 'Required Timeline'}
+                          </Label>
+                          <Select 
+                            value={planningState.projectDetails.timeline}
+                            onValueChange={(value) => setPlanningState(prev => ({
+                              ...prev,
+                              projectDetails: { ...prev.projectDetails, timeline: value }
+                            }))}
+                          >
+                            <SelectTrigger data-testid="select-timeline">
+                              <SelectValue placeholder={lang === 'ar' ? 'اختر المدة' : 'Select timeline'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1-2months">{lang === 'ar' ? '1-2 شهر' : '1-2 months'}</SelectItem>
+                              <SelectItem value="2-4months">{lang === 'ar' ? '2-4 أشهر' : '2-4 months'}</SelectItem>
+                              <SelectItem value="4-6months">{lang === 'ar' ? '4-6 أشهر' : '4-6 months'}</SelectItem>
+                              <SelectItem value="6months+">{lang === 'ar' ? '6+ أشهر' : '6+ months'}</SelectItem>
+                              <SelectItem value="flexible">{lang === 'ar' ? 'مرن' : 'Flexible'}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="additional-requirements">
+                          {lang === 'ar' ? 'متطلبات إضافية' : 'Additional Requirements'}
+                        </Label>
+                        <Textarea
+                          id="additional-requirements"
+                          placeholder={lang === 'ar' ? 'أي متطلبات خاصة أو تفاصيل إضافية تريد إضافتها...' : 'Any special requirements or additional details you want to add...'}
+                          value={planningState.projectDetails.additionalRequirements}
+                          onChange={(e) => setPlanningState(prev => ({
+                            ...prev,
+                            projectDetails: { ...prev.projectDetails, additionalRequirements: e.target.value }
+                          }))}
+                          rows={3}
+                          data-testid="textarea-additional-requirements"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between">
                       <Button 
-                        onClick={() => setLocation('/contact?service=mobile-apps')}
-                        className="w-full"
+                        variant="outline"
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 3 }))}
+                        data-testid="button-prev-step-4"
                       >
-                        {lang === 'ar' ? 'تواصل معنا' : 'Contact Us'}
+                        <ArrowRight className={cn("w-5 h-5 mr-2 rotate-180", dir === 'rtl' && "rotate-0 mr-0 ml-2")} />
+                        {lang === 'ar' ? 'السابق' : 'Previous'}
+                      </Button>
+                      
+                      <Button 
+                        size="lg"
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 5 }))}
+                        disabled={!planningState.projectDetails.appName || !planningState.projectDetails.appDescription || !planningState.projectDetails.targetAudience}
+                        data-testid="button-next-step-4"
+                      >
+                        {lang === 'ar' ? 'التالي: الملفات والمستندات' : 'Next: Files & Documents'}
+                        <ArrowRight className={cn("w-5 h-5 ml-2", dir === 'rtl' && "rotate-180 ml-0 mr-2")} />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 5: Files & Documents */}
+                {planningState.currentStep === 5 && (
+                  <div className="space-y-8">
+                    <Alert>
+                      <Upload className="h-4 w-4" />
+                      <AlertDescription>
+                        {lang === 'ar' ? 'ارفع أي ملفات تساعدنا في فهم مشروعك بشكل أفضل (تصاميم، مخططات، مراجع، إلخ). الحد الأقصى 10 ميجابايت لكل ملف.' : 'Upload any files that help us understand your project better (designs, wireframes, references, etc). Maximum 10MB per file.'}
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="space-y-6">
+                      {/* File Upload Area */}
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors">
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.zip,.rar"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            setPlanningState(prev => ({
+                              ...prev,
+                              uploadedFiles: [...prev.uploadedFiles, ...files]
+                            }));
+                          }}
+                          className="hidden"
+                          id="file-upload"
+                          data-testid="input-file-upload"
+                        />
+                        <label 
+                          htmlFor="file-upload" 
+                          className="cursor-pointer flex flex-col items-center space-y-4"
+                        >
+                          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                            <Upload className="w-8 h-8 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-lg font-semibold text-gray-700">
+                              {lang === 'ar' ? 'اسحب الملفات هنا أو انقر للتصفح' : 'Drag files here or click to browse'}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-2">
+                              {lang === 'ar' ? 'PDF, DOC, صور, ZIP - حتى 10 ميجابايت' : 'PDF, DOC, Images, ZIP - up to 10MB'}
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Uploaded Files List */}
+                      {planningState.uploadedFiles.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-gray-900">
+                            {lang === 'ar' ? 'الملفات المرفوعة' : 'Uploaded Files'} ({planningState.uploadedFiles.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {planningState.uploadedFiles.map((file, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center space-x-3">
+                                  <FileText className="w-5 h-5 text-primary" />
+                                  <div>
+                                    <p className="font-medium text-gray-900">{file.name}</p>
+                                    <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setPlanningState(prev => ({
+                                      ...prev,
+                                      uploadedFiles: prev.uploadedFiles.filter((_, i) => i !== index)
+                                    }));
+                                  }}
+                                  data-testid={`button-remove-file-${index}`}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 4 }))}
+                        data-testid="button-prev-step-5"
+                      >
+                        <ArrowRight className={cn("w-5 h-5 mr-2 rotate-180", dir === 'rtl' && "rotate-0 mr-0 ml-2")} />
+                        {lang === 'ar' ? 'السابق' : 'Previous'}
+                      </Button>
+                      
+                      <Button 
+                        size="lg"
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 6 }))}
+                        data-testid="button-next-step-5"
+                      >
+                        {lang === 'ar' ? 'التالي: معلومات التواصل' : 'Next: Contact Information'}
+                        <ArrowRight className={cn("w-5 h-5 ml-2", dir === 'rtl' && "rotate-180 ml-0 mr-2")} />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 6: Contact Information & Final Submission */}
+                {planningState.currentStep === 6 && (
+                  <div className="space-y-8">
+                    <Alert>
+                      <User className="h-4 w-4" />
+                      <AlertDescription>
+                        {lang === 'ar' ? 'أدخل معلومات التواصل ليتمكن فريقنا من الوصول إليك ومناقشة مشروعك بالتفصيل.' : 'Enter your contact information so our team can reach you and discuss your project in detail.'}
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="grid gap-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="contact-name">
+                            {lang === 'ar' ? 'الاسم الكامل' : 'Full Name'} <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="contact-name"
+                            placeholder={lang === 'ar' ? 'أدخل اسمك الكامل' : 'Enter your full name'}
+                            value={planningState.contactInfo.name}
+                            onChange={(e) => setPlanningState(prev => ({
+                              ...prev,
+                              contactInfo: { ...prev.contactInfo, name: e.target.value }
+                            }))}
+                            data-testid="input-contact-name"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="contact-company">
+                            {lang === 'ar' ? 'اسم الشركة/المؤسسة' : 'Company/Organization'}
+                          </Label>
+                          <Input
+                            id="contact-company"
+                            placeholder={lang === 'ar' ? 'اسم الشركة (اختياري)' : 'Company name (optional)'}
+                            value={planningState.contactInfo.company || ''}
+                            onChange={(e) => setPlanningState(prev => ({
+                              ...prev,
+                              contactInfo: { ...prev.contactInfo, company: e.target.value }
+                            }))}
+                            data-testid="input-contact-company"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="contact-email">
+                            {lang === 'ar' ? 'البريد الإلكتروني' : 'Email Address'} <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="contact-email"
+                            type="email"
+                            placeholder={lang === 'ar' ? 'your@email.com' : 'your@email.com'}
+                            value={planningState.contactInfo.email}
+                            onChange={(e) => setPlanningState(prev => ({
+                              ...prev,
+                              contactInfo: { ...prev.contactInfo, email: e.target.value }
+                            }))}
+                            data-testid="input-contact-email"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="contact-phone">
+                            {lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'} <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="contact-phone"
+                            type="tel"
+                            placeholder={lang === 'ar' ? '+966 XX XXX XXXX' : '+966 XX XXX XXXX'}
+                            value={planningState.contactInfo.phone}
+                            onChange={(e) => setPlanningState(prev => ({
+                              ...prev,
+                              contactInfo: { ...prev.contactInfo, phone: e.target.value }
+                            }))}
+                            data-testid="input-contact-phone"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Project Summary */}
+                    <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {lang === 'ar' ? 'ملخص المشروع' : 'Project Summary'}
+                      </h3>
+                      
+                      <div className="grid md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="font-semibold text-gray-700">{lang === 'ar' ? 'نوع التطبيق:' : 'App Type:'}</p>
+                          <p className="text-gray-600">
+                            {getAppTypes().find(type => type.id === planningState.selectedAppType)?.name || '-'}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <p className="font-semibold text-gray-700">{lang === 'ar' ? 'عدد الميزات:' : 'Features Count:'}</p>
+                          <p className="text-gray-600">{planningState.selectedFeatures.length} {lang === 'ar' ? 'ميزة' : 'features'}</p>
+                        </div>
+                        
+                        <div>
+                          <p className="font-semibold text-gray-700">{lang === 'ar' ? 'التخصصات:' : 'Specializations:'}</p>
+                          <p className="text-gray-600">{planningState.selectedSpecializations.length} {lang === 'ar' ? 'تخصص' : 'specializations'}</p>
+                        </div>
+                        
+                        <div>
+                          <p className="font-semibold text-gray-700">{lang === 'ar' ? 'الملفات المرفقة:' : 'Attached Files:'}</p>
+                          <p className="text-gray-600">{planningState.uploadedFiles.length} {lang === 'ar' ? 'ملف' : 'files'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 5 }))}
+                        data-testid="button-prev-step-6"
+                      >
+                        <ArrowRight className={cn("w-5 h-5 mr-2 rotate-180", dir === 'rtl' && "rotate-0 mr-0 ml-2")} />
+                        {lang === 'ar' ? 'السابق' : 'Previous'}
+                      </Button>
+                      
+                      <Button 
+                        size="lg"
+                        onClick={handleSubmit}
+                        disabled={!planningState.contactInfo.name || !planningState.contactInfo.email || !planningState.contactInfo.phone || isSubmitting}
+                        className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
+                        data-testid="button-submit-request"
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            {lang === 'ar' ? 'جاري الإرسال...' : 'Submitting...'}
+                          </div>
+                        ) : (
+                          <>
+                            <Send className={cn("w-5 h-5 mr-2", dir === 'rtl' && "mr-0 ml-2")} />
+                            {lang === 'ar' ? 'إرسال طلب التطبيق' : 'Submit App Request'}
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>
