@@ -2466,6 +2466,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mobile App Planning API
+  app.post("/api/mobile-app-planning", upload.array('files', 5), async (req, res) => {
+    try {
+      const { appType, features, specializations, projectDetails, contactInfo } = req.body;
+      
+      // Parse JSON strings
+      const parsedFeatures = features ? JSON.parse(features) : [];
+      const parsedSpecializations = specializations ? JSON.parse(specializations) : [];
+      const parsedProjectDetails = projectDetails ? JSON.parse(projectDetails) : {};
+      const parsedContactInfo = contactInfo ? JSON.parse(contactInfo) : {};
+      
+      // Process uploaded files
+      const uploadedFiles = (req.files as Express.Multer.File[]) || [];
+      const fileInfo = uploadedFiles.map(file => ({
+        originalName: file.originalname,
+        filename: file.filename,
+        size: file.size,
+        mimetype: file.mimetype,
+        path: file.path
+      }));
+
+      // Create mobile app order record
+      const orderData = {
+        appType: appType || '',
+        features: parsedFeatures,
+        specializations: parsedSpecializations,
+        projectDetails: parsedProjectDetails,
+        contactInfo: parsedContactInfo,
+        files: fileInfo,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        submittedAt: new Date().toISOString()
+      };
+
+      // Here you would typically save to database
+      // For now, we'll just log the order
+      console.log('Mobile App Planning Request:', {
+        ...orderData,
+        filesCount: fileInfo.length
+      });
+
+      res.json({
+        success: true,
+        message: 'Mobile app planning request submitted successfully',
+        orderId: `APP_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+        filesUploaded: fileInfo.length,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('Mobile app planning submission error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to submit mobile app planning request',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  });
+
   // Mount CRM routes
   app.use("/api/crm", crmRoutes);
   

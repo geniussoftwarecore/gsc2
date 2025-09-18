@@ -3,544 +3,600 @@ import { useLanguage } from "@/i18n/lang";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { SEOHead } from "@/components/SEOHead";
-import { ServiceHero } from "@/components/services/mobile/ServiceHero";
-import { FeatureGrid } from "@/components/services/mobile/FeatureGrid";
-import { UseCases } from "@/components/services/mobile/UseCases";
-import { Integrations } from "@/components/services/mobile/Integrations";
-import { TechStack } from "@/components/services/mobile/TechStack";
-import { ProcessTimeline } from "@/components/services/mobile/ProcessTimeline";
-import { Deliverables } from "@/components/services/mobile/Deliverables";
-import { GettingStarted } from "@/components/services/mobile/GettingStarted";
-import { StickyCTA } from "@/components/services/mobile/StickyCTA";
-import { MobileAppWizard } from "@/components/services/mobile/wizard/MobileAppWizard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Smartphone, Eye, ArrowRight, Star, CheckCircle, Globe, Heart, Users, Brain, Monitor } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { 
+  Smartphone, 
+  ArrowRight, 
+  CheckCircle, 
+  Upload, 
+  FileText,
+  Users,
+  Zap,
+  Shield,
+  Rocket,
+  Globe,
+  Heart,
+  GraduationCap,
+  ShoppingBag,
+  Truck,
+  HeartHandshake,
+  CreditCard,
+  Camera,
+  Play,
+  Star,
+  Monitor,
+  Tablet
+} from "lucide-react";
 import { SiAndroid, SiApple } from "react-icons/si";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
-interface MobileServiceData {
-  hero: {
-    title: string;
-    subtitle: string;
-    description: string;
-    primaryCta: string;
-    secondaryCta: string;
+interface PlanStep {
+  id: number;
+  isCompleted: boolean;
+  isActive: boolean;
+}
+
+interface AppType {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ComponentType<any>;
+  features: string[];
+  color: string;
+  bgColor: string;
+}
+
+interface Feature {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  isRequired?: boolean;
+}
+
+interface PlanningState {
+  currentStep: number;
+  selectedAppType: string | null;
+  selectedFeatures: string[];
+  selectedSpecializations: string[];
+  uploadedFiles: File[];
+  projectDetails: {
+    appName: string;
+    appDescription: string;
+    targetAudience: string;
+    budget: string;
+    timeline: string;
+    additionalRequirements: string;
   };
-  features: {
-    title: string;
-    items: Array<{
-      icon: string;
-      title: string;
-      desc: string;
-    }>;
-  };
-  useCases: {
-    title: string;
-    items: string[];
-  };
-  integrations: {
-    title: string;
-    items: string[];
-  };
-  tech: {
-    title: string;
-    stack: string[];
-  };
-  process: {
-    title: string;
-    steps: string[];
-  };
-  deliverables: {
-    title: string;
-    items: string[];
-  };
-  gettingStarted: {
-    title: string;
-    items: string[];
-  };
-  cta: {
-    title: string;
-    desc: string;
-    primary: string;
-    secondary: string;
-  };
-  seo: {
-    title: string;
-    description: string;
+  contactInfo: {
+    name: string;
+    email: string;
+    phone: string;
+    company?: string;
   };
 }
 
-export default function MobileDetail() {
+export default function MobileServicePage() {
   const { lang, dir } = useLanguage();
   const [, setLocation] = useLocation();
-  const [mobileData, setMobileData] = useState<MobileServiceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedAppCategory, setSelectedAppCategory] = useState("all");
-  const [selectedAppForDetails, setSelectedAppForDetails] = useState<any>(null);
-  const [showAppDetailsModal, setShowAppDetailsModal] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // App Categories Definition
-  const getAppCategories = () => [
-    { id: 'all', name: lang === 'ar' ? 'جميع الأنواع' : 'All Types' },
-    { id: 'ecommerce', name: lang === 'ar' ? 'تجارة إلكترونية' : 'E-commerce' },
-    { id: 'services', name: lang === 'ar' ? 'خدمات عند الطلب' : 'On-Demand Services' },
-    { id: 'education', name: lang === 'ar' ? 'تعليم' : 'Education' },
-    { id: 'health', name: lang === 'ar' ? 'صحة' : 'Healthcare' },
-    { id: 'fintech', name: lang === 'ar' ? 'مالية/مدفوعات' : 'Fintech/Payments' },
-    { id: 'logistics', name: lang === 'ar' ? 'توصيل/نقل' : 'Logistics/Transport' },
-    { id: 'media', name: lang === 'ar' ? 'وسائط/ترفيه' : 'Media/Entertainment' }
-  ];
-
-  // Mobile Apps Data
-  const getMobileApps = () => [
-    // E-commerce Apps
-    {
-      id: 'ec1',
-      name: lang === 'ar' ? "متجر إلكتروني متعدد البائعين" : "Multi-Vendor E-commerce Store",
-      description: lang === 'ar' ? "تحويل البيع إلى أونلاين مع إدارة مخزون ودفع آمن" : "Transform sales online with inventory management and secure payments",
-      features: lang === 'ar' ? ["سلة شراء متقدمة", "بوابات دفع محلية وعالمية", "كوبونات وعروض", "تقارير المبيعات", "دعم عربي/إنجليزي"] : ["Advanced Shopping Cart", "Local & Global Payment Gateways", "Coupons & Offers", "Sales Reports", "Arabic/English Support"],
-      category: "ecommerce",
-      tag: "Enterprise"
-    },
-    {
-      id: 'ec2',
-      name: lang === 'ar' ? "متجر D2C سريع الإطلاق (MVP)" : "Quick Launch D2C Store (MVP)",
-      description: lang === 'ar' ? "أطلق متجرك خلال أسابيع" : "Launch your store within weeks",
-      features: lang === 'ar' ? ["قوالب جاهزة", "دفع آمن", "ربط شحن", "إشعارات فورية"] : ["Ready Templates", "Secure Payment", "Shipping Integration", "Instant Notifications"],
-      category: "ecommerce",
-      tag: "MVP"
-    },
-    {
-      id: 'ec3',
-      name: lang === 'ar' ? "تطبيق توصيل طعام" : "Food Delivery App",
-      description: lang === 'ar' ? "منصة توصيل طعام متكاملة مع تتبع مباشر" : "Complete food delivery platform with live tracking",
-      features: lang === 'ar' ? ["قوائم طعام تفاعلية", "تتبع GPS للتوصيل", "طرق دفع متعددة", "تقييم المطاعم"] : ["Interactive Food Menus", "GPS Delivery Tracking", "Multiple Payment Methods", "Restaurant Reviews"],
-      category: "ecommerce"
-    },
-    // Services Apps
-    {
-      id: 'sv1',
-      name: lang === 'ar' ? "طلب خدمات عند الطلب" : "On-Demand Services App",
-      description: lang === 'ar' ? "حجوزات وفوترة وتتبع مزودين" : "Bookings, billing and service provider tracking",
-      features: lang === 'ar' ? ["خرائط وتتبع", "مواعيد ودفعات", "مراجعات العملاء", "إدارة المقدمين"] : ["Maps & Tracking", "Appointments & Payments", "Customer Reviews", "Provider Management"],
-      category: "services"
-    },
-    {
-      id: 'sv2',
-      name: lang === 'ar' ? "تطبيق صيانة منزلية" : "Home Maintenance App",
-      description: lang === 'ar' ? "خدمات إصلاح وصيانة منزلية بنقرة واحدة" : "One-click home repair and maintenance services",
-      features: lang === 'ar' ? ["فنيين معتمدين", "تسعير شفاف", "ضمان الخدمة", "تقييم الأداء"] : ["Certified Technicians", "Transparent Pricing", "Service Guarantee", "Performance Rating"],
-      category: "services"
-    },
-    // Education Apps
-    {
-      id: 'ed1',
-      name: lang === 'ar' ? "تعلم إلكتروني" : "E-Learning Platform",
-      description: lang === 'ar' ? "كورسات، اختبارات، شهادات" : "Courses, exams, certificates",
-      features: lang === 'ar' ? ["بث مباشر", "اختبارات تفاعلية", "لوحة مدرس", "شهادات معتمدة"] : ["Live Streaming", "Interactive Exams", "Teacher Dashboard", "Certified Certificates"],
-      category: "education"
-    },
-    {
-      id: 'ed2',
-      name: lang === 'ar' ? "مدرسة افتراضية" : "Virtual School",
-      description: lang === 'ar' ? "منصة تعليمية شاملة للطلاب والمعلمين" : "Comprehensive educational platform for students and teachers",
-      features: lang === 'ar' ? ["فصول افتراضية", "مكتبة رقمية", "تقييم مستمر", "تواصل أولياء الأمور"] : ["Virtual Classrooms", "Digital Library", "Continuous Assessment", "Parent Communication"],
-      category: "education"
-    },
-    {
-      id: 'ed3',
-      name: lang === 'ar' ? "تطبيق تعلم اللغات" : "Language Learning App",
-      description: lang === 'ar' ? "تعلم اللغات بطريقة تفاعلية وممتعة" : "Learn languages interactively and fun",
-      features: lang === 'ar' ? ["دروس صوتية", "ألعاب تعليمية", "محادثات AI", "تتبع التقدم"] : ["Audio Lessons", "Educational Games", "AI Conversations", "Progress Tracking"],
-      category: "education"
-    },
-    // Health Apps
-    {
-      id: 'he1',
-      name: lang === 'ar' ? "عيادة عن بُعد" : "Telemedicine Clinic",
-      description: lang === 'ar' ? "مواعيد، وصفات، سجلات" : "Appointments, prescriptions, records",
-      features: lang === 'ar' ? ["مكالمات فيديو", "وصفات PDF", "سجلات مشفرة", "تذكير بالأدوية"] : ["Video Calls", "PDF Prescriptions", "Encrypted Records", "Medicine Reminders"],
-      category: "health"
-    },
-    {
-      id: 'he2',
-      name: lang === 'ar' ? "متابعة صحية" : "Health Monitoring",
-      description: lang === 'ar' ? "تطبيق ذكي لمراقبة الصحة اليومية" : "Smart app for daily health monitoring",
-      features: lang === 'ar' ? ["تتبع الأعراض", "مراقبة العلامات الحيوية", "يوميات صحية", "تقارير طبية"] : ["Symptom Tracking", "Vital Signs Monitoring", "Health Diary", "Medical Reports"],
-      category: "health"
-    },
-    {
-      id: 'he3',
-      name: lang === 'ar' ? "تطبيق لياقة بدنية" : "Fitness Tracker App",
-      description: lang === 'ar' ? "تتبع التمارين والتغذية والأهداف الصحية" : "Track workouts, nutrition and health goals",
-      features: lang === 'ar' ? ["برامج تدريب", "تتبع السعرات", "تحديات يومية", "مدرب شخصي AI"] : ["Training Programs", "Calorie Tracking", "Daily Challenges", "AI Personal Trainer"],
-      category: "health"
-    },
-    // Fintech Apps
-    {
-      id: 'fi1',
-      name: lang === 'ar' ? "محفظة ومدفوعات" : "Digital Wallet & Payments",
-      description: lang === 'ar' ? "تحصيل وسداد آمن" : "Secure collection and payments",
-      features: lang === 'ar' ? ["KYC", "تقارير مالية", "تصاريح دقيقة", "أمان متقدم"] : ["KYC", "Financial Reports", "Precise Authorizations", "Advanced Security"],
-      category: "fintech"
-    },
-    {
-      id: 'fi2',
-      name: lang === 'ar' ? "المحاسبة الشخصية" : "Personal Finance",
-      description: lang === 'ar' ? "تطبيق ذكي لإدارة الأموال والمصروفات" : "Smart personal money and expense management",
-      features: lang === 'ar' ? ["تتبع المصروفات التلقائي", "إنشاء ميزانيات ذكية", "تصنيف المعاملات", "تقارير مالية مفصلة"] : ["Automatic Expense Tracking", "Smart Budget Creation", "Transaction Categorization", "Detailed Financial Reports"],
-      category: "fintech"
-    },
-    {
-      id: 'fi3',
-      name: lang === 'ar' ? "تطبيق تحويلات مالية" : "Money Transfer App",
-      description: lang === 'ar' ? "تحويلات آمنة وسريعة محلياً وعالمياً" : "Secure and fast local and international transfers",
-      features: lang === 'ar' ? ["تحويل فوري", "أسعار تنافسية", "تتبع التحويلات", "دعم عملات متعددة"] : ["Instant Transfer", "Competitive Rates", "Transfer Tracking", "Multi-currency Support"],
-      category: "fintech"
-    },
-    // Logistics Apps
-    {
-      id: 'lg1',
-      name: lang === 'ar' ? "توصيل طلبات" : "Package Delivery",
-      description: lang === 'ar' ? "أسطول وتتبع حي" : "Fleet and live tracking",
-      features: lang === 'ar' ? ["خرائط حية", "مسارات ذكية", "إثبات التسليم", "إدارة السائقين"] : ["Live Maps", "Smart Routes", "Delivery Proof", "Driver Management"],
-      category: "logistics"
-    },
-    {
-      id: 'lg2',
-      name: lang === 'ar' ? "إدارة مخازن" : "Warehouse Management",
-      description: lang === 'ar' ? "نظام ذكي لإدارة المخزون والشحن" : "Smart system for inventory and shipping management",
-      features: lang === 'ar' ? ["تتبع المخزون", "إدارة الطلبات", "تحليل المبيعات", "تقارير فورية"] : ["Inventory Tracking", "Order Management", "Sales Analytics", "Real-time Reports"],
-      category: "logistics"
-    },
-    {
-      id: 'lg3',
-      name: lang === 'ar' ? "تطبيق نقل ركاب" : "Ride Sharing App",
-      description: lang === 'ar' ? "نقل آمن ومريح في المدينة" : "Safe and comfortable city transportation",
-      features: lang === 'ar' ? ["حجز فوري", "تتبع الرحلة", "دفع رقمي", "تقييم السائقين"] : ["Instant Booking", "Trip Tracking", "Digital Payment", "Driver Rating"],
-      category: "logistics"
-    },
-    // Media Apps
-    {
-      id: 'md1',
-      name: lang === 'ar' ? "منصة محتوى" : "Content Platform",
-      description: lang === 'ar' ? "فيديو وبث وتفاعل" : "Video, streaming and interaction",
-      features: lang === 'ar' ? ["رفع وسائط", "تعليقات", "تنبيهات Push", "بث مباشر"] : ["Media Upload", "Comments", "Push Notifications", "Live Streaming"],
-      category: "media"
-    },
-    {
-      id: 'md2',
-      name: lang === 'ar' ? "تطبيق بودكاست" : "Podcast App",
-      description: lang === 'ar' ? "منصة بودكاست عربية متكاملة" : "Complete Arabic podcast platform",
-      features: lang === 'ar' ? ["تشغيل أوف لاين", "قوائم تشغيل", "تحميل حلقات", "إحصائيات مفصلة"] : ["Offline Playback", "Playlists", "Episode Downloads", "Detailed Analytics"],
-      category: "media"
-    },
-    {
-      id: 'md3',
-      name: lang === 'ar' ? "تطبيق تحرير فيديو" : "Video Editing App",
-      description: lang === 'ar' ? "أدوات تحرير احترافية للهواتف الذكية" : "Professional editing tools for smartphones",
-      features: lang === 'ar' ? ["فلاتر متقدمة", "مؤثرات صوتية", "تصدير HD", "مشاركة سحابية"] : ["Advanced Filters", "Audio Effects", "HD Export", "Cloud Sharing"],
-      category: "media"
-    },
-    {
-      id: 'md4',
-      name: lang === 'ar' ? "شبكة اجتماعية" : "Social Network",
-      description: lang === 'ar' ? "منصة تواصل اجتماعي مبتكرة" : "Innovative social networking platform",
-      features: lang === 'ar' ? ["محتوى تفاعلي", "مجموعات مهتمة", "مشاركة لحظية", "أمان متقدم"] : ["Interactive Content", "Interest Groups", "Instant Sharing", "Advanced Security"],
-      category: "media"
-    }
-  ];
-
-  // Filter apps based on selected category
-  const getFilteredApps = () => {
-    const apps = getMobileApps();
-    if (selectedAppCategory === 'all') {
-      return apps;
-    }
-    return apps.filter(app => app.category === selectedAppCategory);
-  };
-
-  const getDetailedAppInfo = (appName: string) => {
-    const appDetails = {
-      // System Optimization Apps Details
-      "مُحسن نظام الأندرويد": {
-        name: "مُحسن نظام الأندرويد",
-        description: "تطبيق متقدم لتحسين أداء نظام الأندرويد وحل المشاكل الشائعة",
-        fullDescription: "تطبيق شامل ومتطور مصمم خصيصاً لتحسين أداء أجهزة الأندرويد وحل المشاكل الشائعة التي تواجه المستخدمين. يستخدم خوارزميات ذكية لتحليل النظام وتنظيفه وتسريعه بشكل آمن وفعال.",
-        keyFeatures: ["تنظيف ذاكرة التخزين المؤقت", "إدارة الذاكرة الذكية", "تسريع الجهاز", "إصلاح أخطاء النظام", "توفير البطارية", "مراقبة الأداء في الوقت الفعلي", "إدارة التطبيقات المشغلة", "تنظيف الملفات غير المرغوبة"],
-        technicalFeatures: ["تحليل عميق للنظام", "خوارزميات تنظيف متقدمة", "مراقبة الأداء المستمرة", "واجهة سهلة الاستخدام", "تقارير مفصلة", "نسخ احتياطية آمنة"],
-        benefits: ["تحسين سرعة الجهاز بنسبة 40%", "توفير مساحة تخزين كبيرة", "إطالة عمر البطارية", "تقليل التجمد والإغلاق المفاجئ", "تجربة استخدام أكثر سلاسة", "حماية الخصوصية"],
-        targetAudience: ["مستخدمي أجهزة الأندرويد", "المهتمين بأداء الجهاز", "المستخدمين الذين يواجهون بطء", "أصحاب الأجهزة القديمة", "المطورين"],
-        timeline: "3-4 أسابيع",
-        technologies: ["Android SDK", "Kotlin", "System APIs", "Background Services", "Material Design", "Performance Analytics"]
-      },
-      "Android System Optimizer": {
-        name: "Android System Optimizer",
-        description: "Advanced app for optimizing Android system performance and fixing common issues",
-        fullDescription: "Comprehensive and advanced application designed specifically to improve Android device performance and solve common user problems. Uses smart algorithms to analyze, clean, and speed up the system safely and effectively.",
-        keyFeatures: ["Cache Cleaner", "Smart Memory Management", "Device Speed Booster", "System Error Fixes", "Battery Saver", "Real-time Performance Monitoring", "Running Apps Manager", "Junk Files Cleanup"],
-        technicalFeatures: ["Deep System Analysis", "Advanced Cleaning Algorithms", "Continuous Performance Monitoring", "User-friendly Interface", "Detailed Reports", "Safe Backups"],
-        benefits: ["40% Device Speed Improvement", "Significant Storage Space Saving", "Extended Battery Life", "Reduced Freezing and Crashes", "Smoother User Experience", "Privacy Protection"],
-        targetAudience: ["Android Device Users", "Performance Enthusiasts", "Users Experiencing Slowdowns", "Older Device Owners", "Developers"],
-        timeline: "3-4 weeks",
-        technologies: ["Android SDK", "Kotlin", "System APIs", "Background Services", "Material Design", "Performance Analytics"]
-      },
-      "مُصلح مشاكل iOS": {
-        name: "مُصلح مشاكل iOS",
-        description: "أداة شاملة لحل مشاكل نظام iOS وتحسين الأداء",
-        fullDescription: "أداة متخصصة ومتطورة لحل مشاكل أجهزة الايفون والايباد التي تعمل بنظام iOS. يركز التطبيق على إصلاح المشاكل الشائعة مثل التجمد، بطء الاستجابة، ومشاكل التطبيقات، مع توفير حلول آمنة وفعالة.",
-        keyFeatures: ["إصلاح تجمد الشاشة", "حل مشاكل التطبيقات", "تحسين سرعة النظام", "إدارة التخزين", "إصلاح أخطاء التحديث", "تحسين أداء البطارية", "إصلاح مشاكل الاتصال", "استعادة البيانات المفقودة"],
-        technicalFeatures: ["تشخيص تلقائي للمشاكل", "إصلاحات آمنة ومعتمدة", "واجهة بسيطة وسهلة", "تقارير تفصيلية", "نسخ احتياطية تلقائية", "دعم جميع إصدارات iOS"],
-        benefits: ["حل سريع للمشاكل الشائعة", "تحسين الأداء العام", "توفير الوقت والجهد", "حماية البيانات", "عدم الحاجة لخبرة تقنية", "دعم فني متميز"],
-        targetAudience: ["مستخدمي أجهزة iOS", "من يواجهون مشاكل تقنية", "المستخدمين غير التقنيين", "أصحاب الأجهزة القديمة", "الشركات"],
-        timeline: "4-5 أسابيع",
-        technologies: ["iOS SDK", "Swift", "Core Foundation", "System Diagnostics", "iCloud Integration", "Apple Guidelines"]
-      },
-      "iOS Problem Solver": {
-        name: "iOS Problem Solver",
-        description: "Comprehensive tool for solving iOS system issues and improving performance",
-        fullDescription: "Specialized and advanced tool for solving iPhone and iPad problems running iOS. The app focuses on fixing common issues like freezing, slow response, and app problems, providing safe and effective solutions.",
-        keyFeatures: ["Screen Freeze Fix", "App Crash Solutions", "System Speed Enhancement", "Storage Management", "Update Error Fixes", "Battery Performance Improvement", "Connection Issues Fix", "Lost Data Recovery"],
-        technicalFeatures: ["Automatic Problem Diagnosis", "Safe and Approved Fixes", "Simple and Easy Interface", "Detailed Reports", "Automatic Backups", "Support for All iOS Versions"],
-        benefits: ["Quick Solutions for Common Problems", "Overall Performance Improvement", "Time and Effort Saving", "Data Protection", "No Technical Expertise Required", "Excellent Technical Support"],
-        targetAudience: ["iOS Device Users", "Those Facing Technical Issues", "Non-technical Users", "Older Device Owners", "Businesses"],
-        timeline: "4-5 weeks",
-        technologies: ["iOS SDK", "Swift", "Core Foundation", "System Diagnostics", "iCloud Integration", "Apple Guidelines"]
-      },
-      "منظف الهاتف الذكي": {
-        name: "منظف الهاتف الذكي",
-        description: "تطبيق قوي لتنظيف وتحسين هواتف الأندرويد والايفون",
-        fullDescription: "تطبيق شامل ومتطور للتنظيف العميق والتحسين الذكي للهواتف الذكية. يعمل مع أنظمة الأندرويد و iOS لإزالة الملفات غير الضرورية، تحسين الأداء، وحماية الخصوصية بطريقة آمنة وفعالة.",
-        keyFeatures: ["إزالة الملفات المؤقتة", "تنظيف الصور المكررة", "إدارة التطبيقات غير المستخدمة", "تحسين الذاكرة", "حماية الخصوصية", "تنظيف WhatsApp", "إدارة التنزيلات", "ضغط الفيديوهات"],
-        technicalFeatures: ["تحليل ذكي للملفات", "خوارزميات تنظيف متقدمة", "فحص أمني شامل", "واجهة تفاعلية", "تشفير البيانات", "استعادة آمنة"],
-        benefits: ["توفير مساحة تخزين كبيرة", "تحسين سرعة الجهاز", "حماية البيانات الشخصية", "إطالة عمر الجهاز", "تجربة استخدام محسنة", "راحة البال"],
-        targetAudience: ["جميع مستخدمي الهواتف الذكية", "من يعانون من نقص المساحة", "المهتمين بالخصوصية", "المستخدمين العاديين", "المحترفين"],
-        timeline: "3-4 أسابيع",
-        technologies: ["Cross-platform Framework", "File System APIs", "Security Protocols", "Image Processing", "Cloud Integration", "Machine Learning"]
-      },
-      "Smart Phone Cleaner": {
-        name: "Smart Phone Cleaner",
-        description: "Powerful app for cleaning and optimizing Android and iPhone devices",
-        fullDescription: "Comprehensive and advanced application for deep cleaning and smart optimization of smartphones. Works with Android and iOS systems to remove unnecessary files, improve performance, and protect privacy safely and effectively.",
-        keyFeatures: ["Temp Files Removal", "Duplicate Photos Cleaner", "Unused Apps Manager", "Memory Optimization", "Privacy Protection", "WhatsApp Cleaner", "Downloads Manager", "Video Compression"],
-        technicalFeatures: ["Smart File Analysis", "Advanced Cleaning Algorithms", "Comprehensive Security Scan", "Interactive Interface", "Data Encryption", "Safe Recovery"],
-        benefits: ["Significant Storage Space Saving", "Device Speed Improvement", "Personal Data Protection", "Extended Device Life", "Enhanced User Experience", "Peace of Mind"],
-        targetAudience: ["All Smartphone Users", "Those Suffering from Low Storage", "Privacy-conscious Users", "Regular Users", "Professionals"],
-        timeline: "3-4 weeks",
-        technologies: ["Cross-platform Framework", "File System APIs", "Security Protocols", "Image Processing", "Cloud Integration", "Machine Learning"]
-      },
-      "حارس البطارية الذكي": {
-        name: "حارس البطارية الذكي",
-        description: "تطبيق متطور لإدارة البطارية وتوفير الطاقة في الهواتف الذكية",
-        fullDescription: "تطبيق ذكي ومتقدم لإدارة وتحسين أداء البطارية في الهواتف الذكية. يستخدم تقنيات الذكاء الاصطناعي لتحليل عادات الاستخدام وتقديم حلول مخصصة لإطالة عمر البطارية وتحسين الأداء.",
-        keyFeatures: ["مراقبة استهلاك البطارية", "أوضاع الطاقة الذكية", "تحليل التطبيقات المستهلكة", "جدولة الشحن", "تنبيهات البطارية", "توقع عمر البطارية", "تحسين الشحن", "إحصائيات مفصلة"],
-        technicalFeatures: ["تحليل AI للاستهلاك", "خوارزميات توفير الطاقة", "مراقبة في الوقت الفعلي", "تعلم أنماط الاستخدام", "تحسينات تلقائية", "تقارير تفصيلية"],
-        benefits: ["إطالة عمر البطارية بنسبة 30%", "تحسين صحة البطارية", "توقعات دقيقة للشحن", "توفير في استهلاك الطاقة", "عمر أطول للجهاز", "راحة البال"],
-        targetAudience: ["مستخدمي الهواتف الذكية", "المستخدمين الكثيفين", "المسافرين", "أصحاب الأجهزة القديمة", "المهتمين بالتكنولوجيا"],
-        timeline: "4-5 أسابيع",
-        technologies: ["AI/ML Algorithms", "Battery APIs", "System Monitoring", "Predictive Analytics", "Power Management", "Data Visualization"]
-      },
-      "Smart Battery Guard": {
-        name: "Smart Battery Guard",
-        description: "Advanced app for battery management and power saving in smartphones",
-        fullDescription: "Smart and advanced application for managing and optimizing battery performance in smartphones. Uses artificial intelligence technologies to analyze usage habits and provide customized solutions to extend battery life and improve performance.",
-        keyFeatures: ["Battery Usage Monitor", "Smart Power Modes", "Power-Hungry Apps Analysis", "Charging Schedule", "Battery Alerts", "Battery Life Prediction", "Charging Optimization", "Detailed Statistics"],
-        technicalFeatures: ["AI Consumption Analysis", "Power Saving Algorithms", "Real-time Monitoring", "Usage Pattern Learning", "Automatic Optimizations", "Detailed Reports"],
-        benefits: ["30% Battery Life Extension", "Improved Battery Health", "Accurate Charging Predictions", "Power Consumption Savings", "Longer Device Lifespan", "Peace of Mind"],
-        targetAudience: ["Smartphone Users", "Heavy Users", "Travelers", "Older Device Owners", "Technology Enthusiasts"],
-        timeline: "4-5 weeks",
-        technologies: ["AI/ML Algorithms", "Battery APIs", "System Monitoring", "Predictive Analytics", "Power Management", "Data Visualization"]
-      },
-      "تطبيق توصيل طعام": {
-        name: "تطبيق توصيل طعام",
-        description: "منصة توصيل طعام متكاملة مع تتبع مباشر وتجربة استخدام استثنائية",
-        fullDescription: "تطبيق توصيل طعام متطور يربط بين العملاء والمطاعم والسائقين. يوفر تجربة طلب سلسة مع تتبع الطلبات في الوقت الفعلي وخيارات دفع متنوعة ونظام تقييم شامل. مصمم لتبسيط عملية طلب الطعام وتحسين خدمة التوصيل.",
-        keyFeatures: ["قوائم طعام تفاعلية", "تخصيص الطلبات", "تتبع GPS للتوصيل", "طرق دفع متعددة", "تقييم المطاعم والسائقين", "عروض وكوبونات", "تاريخ الطلبات", "إشعارات فورية"],
-        technicalFeatures: ["خرائط Google المتقدمة", "معالجة مدفوعات آمنة", "إدارة الطلبات الذكية", "واجهات متعددة", "تحسين المسارات", "قاعدة بيانات مركزية"],
-        benefits: ["سهولة طلب الطعام", "توصيل سريع ودقيق", "خيارات واسعة من المطاعم", "توفير الوقت والجهد", "أسعار تنافسية", "خدمة عملاء ممتازة"],
-        targetAudience: ["محبي الطعام", "العائلات", "المهنيين المشغولين", "الطلاب", "كبار السن"],
-        timeline: "7-9 أسابيع",
-        technologies: ["React Native", "Google Maps", "Socket.io", "Payment Gateway", "Firebase", "GPS Tracking"]
-      },
-      "Food Delivery": {
-        name: "Food Delivery",
-        description: "Food ordering and delivery platform with live tracking and exceptional user experience",
-        fullDescription: "Advanced food delivery app that connects customers, restaurants, and drivers. Provides seamless ordering experience with real-time order tracking, diverse payment options, and comprehensive rating system. Designed to simplify food ordering process and improve delivery service.",
-        keyFeatures: ["Interactive Food Menus", "Order Customization", "GPS Delivery Tracking", "Multiple Payment Methods", "Restaurant & Driver Rating", "Offers & Coupons", "Order History", "Instant Notifications"],
-        technicalFeatures: ["Advanced Google Maps", "Secure Payment Processing", "Smart Order Management", "Multi-platform Interface", "Route Optimization", "Centralized Database"],
-        benefits: ["Easy Food Ordering", "Fast & Accurate Delivery", "Wide Restaurant Options", "Time & Effort Saving", "Competitive Prices", "Excellent Customer Service"],
-        targetAudience: ["Food Lovers", "Families", "Busy Professionals", "Students", "Seniors"],
-        timeline: "7-9 weeks",
-        technologies: ["React Native", "Google Maps", "Socket.io", "Payment Gateway", "Firebase", "GPS Tracking"]
-      },
-      "المحاسبة الشخصية": {
-        name: "المحاسبة الشخصية",
-        description: "تطبيق ذكي لإدارة الأموال والمصروفات الشخصية مع تحليل مالي متقدم",
-        fullDescription: "تطبيق محاسبة شخصية متطور يساعد المستخدمين على إدارة أموالهم بذكاء. يتضمن تتبع المصروفات، وضع الميزانيات، وتحليل العادات المالية. يوفر رؤى مالية قيمة ويساعد على تحقيق الأهداف المالية الشخصية.",
-        keyFeatures: ["تتبع المصروفات التلقائي", "إنشاء ميزانيات ذكية", "تصنيف المعاملات", "تقارير مالية مفصلة", "تنبيهات الميزانية", "أهداف الادخار", "تحليل الاتجاهات المالية", "إدارة الديون"],
-        technicalFeatures: ["مزامنة البنوك", "تشفير البيانات المالية", "واجهة سهلة الاستخدام", "تحليلات ذكية", "نسخ احتياطية آمنة", "تصدير التقارير"],
-        benefits: ["تحسين الإدارة المالية", "توفير المال", "تحقيق الأهداف المالية", "فهم أفضل للعادات المالية", "تقليل الديون", "زيادة الادخار"],
-        targetAudience: ["الأفراد", "العائلات", "الطلاب", "المهنيين الشباب", "أي شخص يريد إدارة أمواله"],
-        timeline: "4-5 أسابيع",
-        technologies: ["React Native", "Plaid API", "Chart.js", "SQLite", "Bank Integration", "Encryption"]
-      },
-      "Personal Finance": {
-        name: "Personal Finance",
-        description: "Smart personal money and expense management app with advanced financial analytics",
-        fullDescription: "Advanced personal finance app that helps users manage their money intelligently. Includes expense tracking, budget creation, and financial habit analysis. Provides valuable financial insights and helps achieve personal financial goals.",
-        keyFeatures: ["Automatic Expense Tracking", "Smart Budget Creation", "Transaction Categorization", "Detailed Financial Reports", "Budget Alerts", "Savings Goals", "Financial Trend Analysis", "Debt Management"],
-        technicalFeatures: ["Bank Synchronization", "Financial Data Encryption", "User-friendly Interface", "Smart Analytics", "Secure Backups", "Report Export"],
-        benefits: ["Better Financial Management", "Money Saving", "Achieving Financial Goals", "Better Understanding of Financial Habits", "Debt Reduction", "Increased Savings"],
-        targetAudience: ["Individuals", "Families", "Students", "Young Professionals", "Anyone wanting to manage money"],
-        timeline: "4-5 weeks",
-        technologies: ["React Native", "Plaid API", "Chart.js", "SQLite", "Bank Integration", "Encryption"]
-      }
-    };
-    
-    return appDetails[appName as keyof typeof appDetails];
-  };
-
-
-  useEffect(() => {
-    // Mobile service data - inline to match requirements
-    const mobileServiceData: MobileServiceData = {
+  // Mobile service data
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const getMobileData = () => {
+    return {
       hero: {
-        title: lang === 'ar' ? 'تطوير تطبيقات الهواتف الذكية' : 'Mobile App Development',
-        subtitle: lang === 'ar' ? 'تطبيقات احترافية لنظامي iOS و Android' : 'Professional iOS & Android Applications',
-        description: lang === 'ar' 
-          ? 'نطور تطبيقات الهواتف المحمولة الاحترافية والسريعة الاستجابة لأنظمة iOS وAndroid باستخدام أحدث التقنيات والمعايير العالمية لضمان أفضل تجربة للمستخدمين.'
-          : 'We develop professional and responsive mobile applications for iOS and Android using the latest technologies and global standards to ensure the best user experience.',
+        title: lang === 'ar' ? 'تطوير تطبيقات الموبايل' : 'Mobile App Development',
+        subtitle: lang === 'ar' ? 'تطبيقات احترافية للأندرويد و iOS' : 'Professional Android and iOS Apps',
+        description: lang === 'ar' ? 'نصمم ونطور تطبيقات موبايل حديثة وآمنة مع دعم كامل للغة العربية' : 'We design and develop modern and secure mobile apps with full Arabic language support',
         primaryCta: lang === 'ar' ? 'ابدأ مشروعك الآن' : 'Start Your Project Now',
-        secondaryCta: lang === 'ar' ? 'استشارة مجانية' : 'Free Consultation'
+        secondaryCta: lang === 'ar' ? 'تحدث مع خبير' : 'Talk to an Expert'
       },
       features: {
-        title: lang === 'ar' ? 'المميزات الأساسية' : 'Core Features',
+        title: lang === 'ar' ? 'نقاط القوة' : 'Our Strengths',
         items: [
           {
-            icon: 'code',
-            title: lang === 'ar' ? 'تطوير احترافي' : 'Professional Development',
-            desc: lang === 'ar' ? 'كود نظيف وقابل للصيانة' : 'Clean and maintainable code'
+            icon: 'Shield',
+            title: lang === 'ar' ? 'أمان مؤسسي' : 'Enterprise Security',
+            desc: lang === 'ar' ? 'تشفير وحماية متقدمة للبيانات' : 'Advanced data encryption and protection'
           },
           {
-            icon: 'mobile',
-            title: lang === 'ar' ? 'تصميم متجاوب' : 'Responsive Design',
-            desc: lang === 'ar' ? 'واجهات تتكيف مع جميع الأحجام' : 'Interfaces that adapt to all sizes'
+            icon: 'Languages',
+            title: lang === 'ar' ? 'دعم متعدد اللغات' : 'Multi-language Support',
+            desc: lang === 'ar' ? 'دعم كامل للعربية والإنجليزية مع RTL' : 'Full Arabic and English support with RTL'
           },
           {
-            icon: 'shield',
-            title: lang === 'ar' ? 'أمان متقدم' : 'Advanced Security',
-            desc: lang === 'ar' ? 'حماية بيانات المستخدمين' : 'User data protection'
+            icon: 'Rocket',
+            title: lang === 'ar' ? 'أداء عالي' : 'High Performance',
+            desc: lang === 'ar' ? 'تطبيقات سريعة ومستقرة' : 'Fast and stable applications'
+          },
+          {
+            icon: 'Smartphone',
+            title: lang === 'ar' ? 'تجربة مميزة' : 'Premium Experience',
+            desc: lang === 'ar' ? 'واجهات مستخدم حديثة وسهلة' : 'Modern and user-friendly interfaces'
+          },
+          {
+            icon: 'MessageCircle',
+            title: lang === 'ar' ? 'دعم فني مستمر' : 'Continuous Support',
+            desc: lang === 'ar' ? 'فريق دعم متاح على مدار الساعة' : '24/7 support team available'
+          },
+          {
+            icon: 'Bell',
+            title: lang === 'ar' ? 'إشعارات ذكية' : 'Smart Notifications',
+            desc: lang === 'ar' ? 'نظام إشعارات متقدم ومخصص' : 'Advanced and customized notification system'
           }
         ]
       },
-      useCases: {
-        title: lang === 'ar' ? 'حالات الاستخدام' : 'Use Cases',
-        items: lang === 'ar' 
-          ? ['التجارة الإلكترونية', 'التعليم الإلكتروني', 'الخدمات الصحية', 'الخدمات المالية']
-          : ['E-commerce', 'E-learning', 'Healthcare Services', 'Financial Services']
-      },
-      integrations: {
-        title: lang === 'ar' ? 'التكاملات' : 'Integrations',
-        items: lang === 'ar'
-          ? ['بوابات الدفع', 'خدمات السحابة', 'التحليلات', 'الإشعارات']
-          : ['Payment Gateways', 'Cloud Services', 'Analytics', 'Notifications']
-      },
-      tech: {
-        title: lang === 'ar' ? 'التقنيات المستخدمة' : 'Technologies Used',
-        stack: ['React Native', 'Flutter', 'Swift', 'Kotlin', 'Firebase']
-      },
-      process: {
-        title: lang === 'ar' ? 'كيف نعمل' : 'How We Work',
-        steps: lang === 'ar'
-          ? [
-              'تحليل المتطلبات - نحلل احتياجاتك ونفهم أهدافك بدقة',
-              'التصميم وتجربة المستخدم - نصمم واجهات جذابة وسهلة الاستخدام',
-              'التطوير والتكامل - نبرمج التطبيق ونربطه بالخدمات المطلوبة',
-              'الاختبار والتسليم - نختبر بدقة ونسلم تطبيقاً جاهزاً للنشر'
-            ]
-          : [
-              'Requirements Analysis - We analyze your needs and understand your goals precisely',
-              'Design & User Experience - We design attractive and user-friendly interfaces',
-              'Development & Integration - We code the app and integrate it with required services',
-              'Testing & Delivery - We test thoroughly and deliver a ready-to-publish app'
-            ]
-      },
-      deliverables: {
-        title: lang === 'ar' ? 'ما ستحصل عليه' : 'What You Will Get',
-        items: lang === 'ar'
-          ? [
-              'الكود المصدري الكامل للتطبيق',
-              'دعم فني متواصل لضمان استمرارية العمل',
-              'تسليم في الوقت المحدد حسب الجدول المتفق عليه',
-              'الاختبارات والتقارير الشاملة لضمان الجودة',
-              'التدريب والدعم لفريقك لإدارة التطبيق',
-              'وثائق تقنية مفصلة',
-              'دليل المستخدم الشامل'
-            ]
-          : [
-              'Complete source code of the application',
-              'Continuous technical support to ensure business continuity',
-              'On-time delivery according to agreed schedule',
-              'Comprehensive testing and reports to ensure quality',
-              'Training and support for your team to manage the app',
-              'Detailed technical documentation',
-              'Comprehensive user guide'
-            ]
-      },
-      gettingStarted: {
-        title: lang === 'ar' ? 'كيفية البدء' : 'Getting Started',
-        items: lang === 'ar'
-          ? ['تواصل معنا', 'مناقشة المشروع', 'الحصول على عرض سعر', 'بدء التطوير']
-          : ['Contact Us', 'Discuss Project', 'Get Quote', 'Start Development']
-      },
       cta: {
-        title: lang === 'ar' ? 'جاهز لبدء مشروعك؟' : 'Ready to Start Your Project?',
-        desc: lang === 'ar'
-          ? 'تواصل معنا اليوم واحصل على استشارة مجانية لتطوير تطبيقك المثالي'
-          : 'Contact us today and get a free consultation to develop your perfect app',
-        primary: lang === 'ar' ? 'ابدأ مشروعك الآن' : 'Start Your Project Now',
-        secondary: lang === 'ar' ? 'تصفح خدمات أخرى' : 'Browse Other Services'
+        title: lang === 'ar' ? 'جاهز للانطلاق؟' : 'Ready to Launch?',
+        desc: lang === 'ar' ? 'لنحول فكرتك إلى تطبيق حقيقي' : 'Let\'s turn your idea into reality',
+        primary: lang === 'ar' ? 'ابدأ مشروعك الآن' : 'Start Your Project',
+        secondary: lang === 'ar' ? 'تحدث مع خبير' : 'Talk to Expert'
       },
       seo: {
-        title: lang === 'ar' 
-          ? 'تطوير تطبيقات الهواتف الذكية - خدماتنا | Genius Software Core'
-          : 'Mobile App Development - Our Services | Genius Software Core',
-        description: lang === 'ar'
-          ? 'نطور تطبيقات الهواتف المحمولة الاحترافية لأنظمة iOS وAndroid. خدمات شاملة من التصميم إلى النشر مع دعم فني متواصل.'
-          : 'We develop professional mobile applications for iOS and Android. Comprehensive services from design to deployment with continuous technical support.'
+        title: lang === 'ar' ? 'تطوير تطبيقات الموبايل | GSC' : 'Mobile App Development | GSC',
+        description: lang === 'ar' ? 'تطوير تطبيقات احترافية للأندرويد و iOS' : 'Professional Android and iOS app development'
       }
     };
+  };
 
-    setMobileData(mobileServiceData);
-    setLoading(false);
-  }, [lang]);
+  const [planningState, setPlanningState] = useState<PlanningState>({
+    currentStep: 1,
+    selectedAppType: null,
+    selectedFeatures: [],
+    selectedSpecializations: [],
+    uploadedFiles: [],
+    projectDetails: {
+      appName: '',
+      appDescription: '',
+      targetAudience: '',
+      budget: '',
+      timeline: '',
+      additionalRequirements: ''
+    },
+    contactInfo: {
+      name: '',
+      email: '',
+      phone: '',
+      company: ''
+    }
+  });
 
-  if (loading) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // App Types Definition
+  const getAppTypes = (): AppType[] => [
+    {
+      id: 'business',
+      name: lang === 'ar' ? 'تطبيق تجاري' : 'Business App',
+      description: lang === 'ar' ? 'تطبيقات للشركات والخدمات التجارية' : 'Apps for companies and business services',
+      icon: Users,
+      features: lang === 'ar' ? [
+        'إدارة العملاء والحجوزات',
+        'نظام فواتير ومدفوعات',
+        'تقارير ومتابعة الأداء',
+        'إشعارات فورية'
+      ] : [
+        'Customer & booking management',
+        'Billing & payment system',
+        'Reports & performance tracking', 
+        'Push notifications'
+      ],
+      color: 'blue',
+      bgColor: 'bg-blue-50 hover:bg-blue-100'
+    },
+    {
+      id: 'ecommerce',
+      name: lang === 'ar' ? 'متجر إلكتروني' : 'E-commerce App',
+      description: lang === 'ar' ? 'تطبيقات للتجارة الإلكترونية والمبيعات' : 'E-commerce and sales applications',
+      icon: ShoppingBag,
+      features: lang === 'ar' ? [
+        'كتالوج منتجات تفاعلي',
+        'سلة شراء ونظام دفع',
+        'إدارة المخزون',
+        'كوبونات وعروض'
+      ] : [
+        'Interactive product catalog',
+        'Shopping cart & payment',
+        'Inventory management',
+        'Coupons & offers'
+      ],
+      color: 'green',
+      bgColor: 'bg-green-50 hover:bg-green-100'
+    },
+    {
+      id: 'education',
+      name: lang === 'ar' ? 'تطبيق تعليمي' : 'Educational App',
+      description: lang === 'ar' ? 'منصات التعلم والتدريب الإلكتروني' : 'Learning and e-training platforms',
+      icon: GraduationCap,
+      features: lang === 'ar' ? [
+        'محتوى تعليمي تفاعلي',
+        'اختبارات وتقييمات',
+        'متابعة التقدم',
+        'شهادات ومكافآت'
+      ] : [
+        'Interactive educational content',
+        'Tests & assessments',
+        'Progress tracking',
+        'Certificates & rewards'
+      ],
+      color: 'purple',
+      bgColor: 'bg-purple-50 hover:bg-purple-100'
+    },
+    {
+      id: 'healthcare',
+      name: lang === 'ar' ? 'تطبيق صحي' : 'Healthcare App',
+      description: lang === 'ar' ? 'تطبيقات الرعاية الصحية والطبية' : 'Healthcare and medical applications',
+      icon: HeartHandshake,
+      features: lang === 'ar' ? [
+        'حجز مواعيد طبية',
+        'سجلات صحية إلكترونية',
+        'استشارات عن بُعد',
+        'تذكير بالأدوية'
+      ] : [
+        'Medical appointment booking',
+        'Electronic health records',
+        'Telemedicine consultations',
+        'Medication reminders'
+      ],
+      color: 'red',
+      bgColor: 'bg-red-50 hover:bg-red-100'
+    },
+    {
+      id: 'logistics',
+      name: lang === 'ar' ? 'تطبيق لوجستي' : 'Logistics App',
+      description: lang === 'ar' ? 'تطبيقات التوصيل والنقل' : 'Delivery and transportation apps',
+      icon: Truck,
+      features: lang === 'ar' ? [
+        'تتبع GPS مباشر',
+        'إدارة الشحنات',
+        'تحسين المسارات',
+        'إثبات التسليم'
+      ] : [
+        'Live GPS tracking',
+        'Shipment management',
+        'Route optimization',
+        'Delivery proof'
+      ],
+      color: 'orange',
+      bgColor: 'bg-orange-50 hover:bg-orange-100'
+    },
+    {
+      id: 'fintech',
+      name: lang === 'ar' ? 'تطبيق مالي' : 'Fintech App',
+      description: lang === 'ar' ? 'تطبيقات الخدمات المالية والمدفوعات' : 'Financial services and payment apps',
+      icon: CreditCard,
+      features: lang === 'ar' ? [
+        'محفظة رقمية آمنة',
+        'تحويلات مالية',
+        'إدارة الحسابات',
+        'تقارير مالية'
+      ] : [
+        'Secure digital wallet',
+        'Money transfers',
+        'Account management',
+        'Financial reports'
+      ],
+      color: 'indigo',
+      bgColor: 'bg-indigo-50 hover:bg-indigo-100'
+    },
+    {
+      id: 'media',
+      name: lang === 'ar' ? 'تطبيق إعلامي' : 'Media App',
+      description: lang === 'ar' ? 'تطبيقات المحتوى والترفيه' : 'Content and entertainment apps',
+      icon: Play,
+      features: lang === 'ar' ? [
+        'بث ومشاركة المحتوى',
+        'تفاعل اجتماعي',
+        'بث مباشر',
+        'قوائم تشغيل'
+      ] : [
+        'Content streaming & sharing',
+        'Social interaction',
+        'Live streaming',
+        'Playlists'
+      ],
+      color: 'pink',
+      bgColor: 'bg-pink-50 hover:bg-pink-100'
+    }
+  ];
+
+  // Features Definition
+  const getFeatures = (): Feature[] => [
+    // Core Features
+    {
+      id: 'user_auth',
+      name: lang === 'ar' ? 'نظام المستخدمين والمصادقة' : 'User Authentication System',
+      description: lang === 'ar' ? 'تسجيل دخول آمن وإدارة المستخدمين' : 'Secure login and user management',
+      category: 'core',
+      isRequired: true
+    },
+    {
+      id: 'offline_mode',
+      name: lang === 'ar' ? 'وضع عدم الاتصال' : 'Offline Mode',
+      description: lang === 'ar' ? 'العمل بدون إنترنت مع المزامنة اللاحقة' : 'Work without internet with later sync',
+      category: 'core'
+    },
+    {
+      id: 'push_notifications',
+      name: lang === 'ar' ? 'الإشعارات الفورية' : 'Push Notifications',
+      description: lang === 'ar' ? 'إشعارات مخصصة ومجدولة' : 'Customized and scheduled notifications',
+      category: 'core'
+    },
+    {
+      id: 'multilingual',
+      name: lang === 'ar' ? 'دعم متعدد اللغات' : 'Multi-language Support',
+      description: lang === 'ar' ? 'عربي وإنجليزي مع دعم RTL' : 'Arabic and English with RTL support',
+      category: 'core'
+    },
+
+    // Business Features
+    {
+      id: 'payment_gateway',
+      name: lang === 'ar' ? 'بوابة الدفع' : 'Payment Gateway',
+      description: lang === 'ar' ? 'دفع آمن عبر بطاقات ومحافظ رقمية' : 'Secure payment via cards and digital wallets',
+      category: 'business'
+    },
+    {
+      id: 'analytics',
+      name: lang === 'ar' ? 'تحليلات متقدمة' : 'Advanced Analytics',
+      description: lang === 'ar' ? 'تقارير ومقاييس الأداء' : 'Reports and performance metrics',
+      category: 'business'
+    },
+    {
+      id: 'admin_panel',
+      name: lang === 'ar' ? 'لوحة إدارة' : 'Admin Panel',
+      description: lang === 'ar' ? 'لوحة تحكم شاملة للإدارة' : 'Comprehensive management dashboard',
+      category: 'business'
+    },
+    {
+      id: 'crm_integration',
+      name: lang === 'ar' ? 'ربط مع أنظمة CRM' : 'CRM Integration',
+      description: lang === 'ar' ? 'تكامل مع أنظمة إدارة العملاء' : 'Integration with customer management systems',
+      category: 'business'
+    },
+
+    // Technical Features
+    {
+      id: 'real_time_sync',
+      name: lang === 'ar' ? 'المزامنة الفورية' : 'Real-time Sync',
+      description: lang === 'ar' ? 'تحديث البيانات في الوقت الفعلي' : 'Real-time data updates',
+      category: 'technical'
+    },
+    {
+      id: 'biometric_auth',
+      name: lang === 'ar' ? 'المصادقة البيومترية' : 'Biometric Authentication',
+      description: lang === 'ar' ? 'بصمة الإصبع والتعرف على الوجه' : 'Fingerprint and face recognition',
+      category: 'technical'
+    },
+    {
+      id: 'gps_location',
+      name: lang === 'ar' ? 'خدمات الموقع GPS' : 'GPS Location Services',
+      description: lang === 'ar' ? 'تتبع الموقع والخرائط التفاعلية' : 'Location tracking and interactive maps',
+      category: 'technical'
+    },
+    {
+      id: 'camera_integration',
+      name: lang === 'ar' ? 'تكامل الكاميرا' : 'Camera Integration',
+      description: lang === 'ar' ? 'التقاط الصور ومسح الـ QR' : 'Photo capture and QR scanning',
+      category: 'technical'
+    },
+
+    // Social Features
+    {
+      id: 'social_sharing',
+      name: lang === 'ar' ? 'المشاركة الاجتماعية' : 'Social Sharing',
+      description: lang === 'ar' ? 'مشاركة المحتوى على المنصات الاجتماعية' : 'Content sharing on social platforms',
+      category: 'social'
+    },
+    {
+      id: 'in_app_chat',
+      name: lang === 'ar' ? 'دردشة داخل التطبيق' : 'In-app Chat',
+      description: lang === 'ar' ? 'نظام مراسلة فوري' : 'Instant messaging system',
+      category: 'social'
+    },
+    {
+      id: 'reviews_ratings',
+      name: lang === 'ar' ? 'التقييمات والمراجعات' : 'Reviews & Ratings',
+      description: lang === 'ar' ? 'نظام تقييم المستخدمين' : 'User rating system',
+      category: 'social'
+    }
+  ];
+
+  // Specializations Definition
+  const getSpecializations = () => [
+    {
+      id: 'healthcare_medical',
+      name: lang === 'ar' ? 'الرعاية الصحية والطبية' : 'Healthcare & Medical',
+      description: lang === 'ar' ? 'تطبيقات طبية متخصصة ومراقبة صحية' : 'Specialized medical apps and health monitoring',
+      icon: HeartHandshake,
+      color: 'red'
+    },
+    {
+      id: 'fintech_banking',
+      name: lang === 'ar' ? 'التكنولوجيا المالية والبنوك' : 'Fintech & Banking',
+      description: lang === 'ar' ? 'حلول دفع وخدمات مصرفية رقمية' : 'Payment solutions and digital banking services',
+      icon: CreditCard,
+      color: 'green'
+    },
+    {
+      id: 'education_learning',
+      name: lang === 'ar' ? 'التعليم والتدريب' : 'Education & Learning',
+      description: lang === 'ar' ? 'منصات تعليمية وإدارة المحتوى التعليمي' : 'Educational platforms and learning content management',
+      icon: GraduationCap,
+      color: 'blue'
+    },
+    {
+      id: 'ecommerce_retail',
+      name: lang === 'ar' ? 'التجارة الإلكترونية والبيع بالتجزئة' : 'E-commerce & Retail',
+      description: lang === 'ar' ? 'متاجر إلكترونية وإدارة المبيعات' : 'Online stores and sales management',
+      icon: ShoppingBag,
+      color: 'purple'
+    },
+    {
+      id: 'logistics_delivery',
+      name: lang === 'ar' ? 'اللوجستيات والتوصيل' : 'Logistics & Delivery',
+      description: lang === 'ar' ? 'إدارة الشحن والتتبع والتوصيل' : 'Shipping management, tracking and delivery',
+      icon: Truck,
+      color: 'orange'
+    },
+    {
+      id: 'real_estate',
+      name: lang === 'ar' ? 'العقارات' : 'Real Estate',
+      description: lang === 'ar' ? 'تطبيقات عقارية وإدارة الممتلكات' : 'Real estate apps and property management',
+      icon: Monitor,
+      color: 'indigo'
+    },
+    {
+      id: 'food_beverage',
+      name: lang === 'ar' ? 'الطعام والمشروبات' : 'Food & Beverage',
+      description: lang === 'ar' ? 'طلب الطعام وإدارة المطاعم' : 'Food ordering and restaurant management',
+      icon: Heart,
+      color: 'pink'
+    },
+    {
+      id: 'travel_tourism',
+      name: lang === 'ar' ? 'السياحة والسفر' : 'Travel & Tourism',
+      description: lang === 'ar' ? 'حجوزات السفر والرحلات السياحية' : 'Travel bookings and tourism services',
+      icon: Globe,
+      color: 'teal'
+    },
+    {
+      id: 'media_entertainment',
+      name: lang === 'ar' ? 'الإعلام والترفيه' : 'Media & Entertainment',
+      description: lang === 'ar' ? 'المحتوى الرقمي والألعاب والتطبيقات الترفيهية' : 'Digital content, games and entertainment apps',
+      icon: Play,
+      color: 'yellow'
+    },
+    {
+      id: 'social_networking',
+      name: lang === 'ar' ? 'الشبكات الاجتماعية' : 'Social Networking',
+      description: lang === 'ar' ? 'منصات التواصل الاجتماعي والمجتمعات الرقمية' : 'Social media platforms and digital communities',
+      icon: Users,
+      color: 'cyan'
+    }
+  ];
+
+  // Steps for planning process
+  const planSteps = [
+    {
+      id: 1,
+      title: lang === 'ar' ? 'نوع التطبيق' : 'App Type',
+      description: lang === 'ar' ? 'اختر نوع التطبيق المطلوب' : 'Choose your app type'
+    },
+    {
+      id: 2,
+      title: lang === 'ar' ? 'الميزات' : 'Features',
+      description: lang === 'ar' ? 'حدد الميزات المطلوبة' : 'Select required features'
+    },
+    {
+      id: 3,
+      title: lang === 'ar' ? 'التخصصات' : 'Specializations',
+      description: lang === 'ar' ? 'اختر التخصصات والمجالات' : 'Select specializations and domains'
+    },
+    {
+      id: 4,
+      title: lang === 'ar' ? 'تفاصيل المشروع' : 'Project Details',
+      description: lang === 'ar' ? 'أضف تفاصيل مشروعك' : 'Add your project details'
+    },
+    {
+      id: 5,
+      title: lang === 'ar' ? 'الملفات والمستندات' : 'Files & Documents',
+      description: lang === 'ar' ? 'ارفع الملفات ذات الصلة' : 'Upload relevant files'
+    },
+    {
+      id: 6,
+      title: lang === 'ar' ? 'معلومات التواصل' : 'Contact Info',
+      description: lang === 'ar' ? 'أدخل معلومات التواصل' : 'Enter contact information'
+    }
+  ];
+
+  // Submit mutation
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      const formData = new FormData();
+      
+      // Add project data
+      formData.append('appType', planningState.selectedAppType || '');
+      formData.append('features', JSON.stringify(planningState.selectedFeatures));
+      formData.append('specializations', JSON.stringify(planningState.selectedSpecializations));
+      formData.append('projectDetails', JSON.stringify(planningState.projectDetails));
+      formData.append('contactInfo', JSON.stringify(planningState.contactInfo));
+      
+      // Add files
+      planningState.uploadedFiles.forEach((file, index) => {
+        formData.append(`file_${index}`, file);
+      });
+
+      const response = await fetch('/api/mobile-app-planning', {
+        method: 'POST',
+        body: formData
+      });
+      if (!response.ok) {
+        throw new Error('Failed to submit request');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: lang === 'ar' ? 'تم إرسال الطلب بنجاح' : 'Request submitted successfully',
+        description: lang === 'ar' ? 'سيتم التواصل معك قريباً' : 'We will contact you soon',
+      });
+      
+      // Reset state
+      setPlanningState({
+        currentStep: 1,
+        selectedAppType: null,
+        selectedFeatures: [],
+        selectedSpecializations: [],
+        uploadedFiles: [],
+        projectDetails: {
+          appName: '',
+          appDescription: '',
+          targetAudience: '',
+          budget: '',
+          timeline: '',
+          additionalRequirements: ''
+        },
+        contactInfo: {
+          name: '',
+          email: '',
+          phone: '',
+          company: ''
+        }
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: lang === 'ar' ? 'خطأ في إرسال الطلب' : 'Error submitting request',
+        description: lang === 'ar' ? 'حدث خطأ، يرجى المحاولة مرة أخرى' : 'An error occurred, please try again',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const handleSubmit = () => {
+    setIsSubmitting(true);
+    submitMutation.mutate();
+  };
+
+  const mobileData = getMobileData();
+  
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <span className="text-lg font-medium text-gray-600">
-            {lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!mobileData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            {lang === 'ar' ? 'خطأ في تحميل البيانات' : 'Failed to load service data'}
-          </h1>
-          <p className="text-gray-600">
-            {lang === 'ar' ? 'تعذر تحميل بيانات خدمة تطبيقات الموبايل' : 'Could not load mobile app service data'}
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">
+            {lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}
           </p>
         </div>
       </div>
@@ -549,604 +605,638 @@ export default function MobileDetail() {
 
   return (
     <>
-      <SEOHead
+      <SEOHead 
         title={mobileData.seo.title}
         description={mobileData.seo.description}
       />
       
-      <main className="bg-white">
-        {/* Hero Section */}
-        <ServiceHero
-          title={mobileData.hero.title}
-          subtitle={mobileData.hero.subtitle}
-          description={mobileData.hero.description}
-          primaryCta={mobileData.hero.primaryCta}
-          secondaryCta={mobileData.hero.secondaryCta}
-        />
-
-        {/* Platform Compatibility Section */}
-        <TooltipProvider>
-          <section className="py-8 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+      <main className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-purple-50/20" dir={dir}>
+        {/* Enhanced Hero Section with Interactive Platform Icons */}
+        <section className="relative bg-gradient-to-br from-white via-blue-50/50 to-purple-50/30 py-20 overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute inset-0 bg-grid-gray-100/50 bg-[size:32px_32px] opacity-30" />
+          
+          {/* Interactive Platform Icons Bar */}
+          <div className="absolute top-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-800/50 z-20">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <motion.div
-                className="text-center"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-              >
-                <h3 className="text-lg font-semibold text-brand-text-primary mb-4">
-                  {dir === 'rtl' ? 'متوافق مع جميع المنصات' : 'Compatible with All Platforms'}
-                </h3>
-                <div className="flex justify-center items-center gap-6 sm:gap-8" dir="ltr">
-                  {/* iOS Icon */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-default group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50"
-                        role="img"
-                        aria-label={dir === 'rtl' ? 'متوافق مع iOS - iPhone و iPad' : 'iOS compatible - iPhone and iPad'}
-                        data-testid="icon-ios"
-                      >
-                        <SiApple 
-                          className="w-10 h-10 text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" 
-                          aria-hidden="true"
-                        />
-                        <span className="text-sm font-medium text-brand-text-muted">iOS</span>
-                        <span className="sr-only">{dir === 'rtl' ? 'متوافق مع iPhone و iPad' : 'Compatible with iPhone & iPad'}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{dir === 'rtl' ? 'متوافق مع iPhone و iPad' : 'Compatible with iPhone & iPad'}</p>
-                    </TooltipContent>
-                  </Tooltip>
+              <TooltipProvider>
+                <div className="flex items-center justify-center gap-8 py-4" data-testid="bar-platforms">
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                    className="group"
+                  >
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button 
+                          className="flex items-center gap-3 px-6 py-3 rounded-full bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-900/20 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 group-hover:scale-105 group-hover:shadow-lg"
+                          aria-label={dir === 'rtl' ? 'تطبيقات أندرويد' : 'Android Apps'}
+                          data-testid="badge-android"
+                        >
+                          <SiAndroid className="w-6 h-6 text-green-600 group-hover:scale-110 transition-transform" />
+                          <span className="font-semibold text-green-700 text-sm">
+                            {dir === 'rtl' ? 'أندرويد' : 'Android'}
+                          </span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{dir === 'rtl' ? 'تطبيقات أندرويد أصلية' : 'Native Android Apps'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </motion.div>
 
-                  {/* Android Icon */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-default group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50"
-                        role="img"
-                        aria-label={dir === 'rtl' ? 'متوافق مع Android - جميع الأجهزة' : 'Android compatible - All devices'}
-                        data-testid="icon-android"
-                      >
-                        <SiAndroid 
-                          className="w-10 h-10 text-emerald-600 dark:text-emerald-500 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors" 
-                          aria-hidden="true"
-                        />
-                        <span className="text-sm font-medium text-brand-text-muted">Android</span>
-                        <span className="sr-only">{dir === 'rtl' ? 'متوافق مع جميع أجهزة Android' : 'Compatible with all Android devices'}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{dir === 'rtl' ? 'متوافق مع جميع أجهزة Android' : 'Compatible with all Android devices'}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                    className="group"
+                  >
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button 
+                          className="flex items-center gap-3 px-6 py-3 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 group-hover:scale-105 group-hover:shadow-lg"
+                          aria-label={dir === 'rtl' ? 'تطبيقات الهواتف الذكية' : 'Mobile Apps'}
+                          data-testid="badge-mobile"
+                        >
+                          <Smartphone className="w-6 h-6 text-gray-600 group-hover:scale-110 transition-transform" />
+                          <span className="font-semibold text-gray-700 text-sm">
+                            {dir === 'rtl' ? 'موبايل' : 'Mobile'}
+                          </span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{dir === 'rtl' ? 'تطبيقات متعددة المنصات' : 'Cross-platform Apps'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </motion.div>
 
-                  {/* Web App Icon */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-default group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50"
-                        role="img"
-                        aria-label={dir === 'rtl' ? 'تطبيق ويب - يعمل على جميع المتصفحات' : 'Web app - Works on all browsers'}
-                        data-testid="icon-web"
-                      >
-                        <Globe 
-                          className="w-10 h-10 text-blue-600 dark:text-blue-500 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors" 
-                          aria-hidden="true"
-                        />
-                        <span className="text-sm font-medium text-brand-text-muted">{dir === 'rtl' ? 'ويب' : 'Web'}</span>
-                        <span className="sr-only">{dir === 'rtl' ? 'يعمل على جميع المتصفحات' : 'Works on all web browsers'}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{dir === 'rtl' ? 'يعمل على جميع المتصفحات' : 'Works on all web browsers'}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                    className="group"
+                  >
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button 
+                          className="flex items-center gap-3 px-6 py-3 rounded-full bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 group-hover:scale-105 group-hover:shadow-lg"
+                          aria-label={dir === 'rtl' ? 'تطبيقات الآيفون' : 'iOS Apps'}
+                          data-testid="badge-ios"
+                        >
+                          <SiApple className="w-6 h-6 text-blue-600 group-hover:scale-110 transition-transform" />
+                          <span className="font-semibold text-blue-700 text-sm">
+                            {dir === 'rtl' ? 'آيفون' : 'iOS'}
+                          </span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{dir === 'rtl' ? 'تطبيقات آيفون وآيباد' : 'iPhone & iPad Apps'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </motion.div>
                 </div>
+              </TooltipProvider>
+            </div>
+          </div>
+
+          {/* Hero Content */}
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 relative z-10">
+            <div className="text-center max-w-4xl mx-auto">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="mb-6"
+              >
+                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-primary/10 text-primary border-primary/20">
+                  <Rocket className="w-4 h-4 mr-2" />
+                  {mobileData.hero.title}
+                </Badge>
+              </motion.div>
+
+              <motion.h1 
+                className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+                data-testid="hero-title"
+              >
+                {mobileData.hero.subtitle}
+              </motion.h1>
+
+              <motion.p 
+                className="text-xl text-gray-600 mb-8 leading-relaxed"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                data-testid="hero-description"
+              >
+                {mobileData.hero.description}
+              </motion.p>
+
+              <motion.div 
+                className="flex flex-col sm:flex-row gap-4 justify-center"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+              >
+                <Button 
+                  size="lg" 
+                  className="bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                  onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 1 }))}
+                  data-testid="button-start-planning"
+                >
+                  <ArrowRight className={cn(
+                    "w-5 h-5 mr-2",
+                    dir === 'rtl' && "rotate-180 mr-0 ml-2"
+                  )} />
+                  {lang === 'ar' ? 'ابدأ تخطيط تطبيقك' : 'Start Planning Your App'}
+                </Button>
+                
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="border-2 border-primary text-primary hover:bg-primary hover:text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300"
+                  onClick={() => setLocation('/contact?service=mobile-apps')}
+                  data-testid="button-contact"
+                >
+                  {mobileData.hero.secondaryCta}
+                </Button>
               </motion.div>
             </div>
-          </section>
-        </TooltipProvider>
+          </div>
+        </section>
 
-        {/* Features Grid */}
-        <FeatureGrid
-          title={mobileData.features.title}
-          features={mobileData.features.items}
-        />
-
-        {/* Use Cases */}
-        <UseCases
-          title={mobileData.useCases.title}
-          items={mobileData.useCases.items}
-        />
-
-        {/* Integrations */}
-        <Integrations
-          title={mobileData.integrations.title}
-          items={mobileData.integrations.items}
-        />
-
-        {/* Tech Stack */}
-        <TechStack
-          title={mobileData.tech.title}
-          stack={mobileData.tech.stack}
-        />
-
-        {/* Process Timeline */}
-        <ProcessTimeline
-          title={mobileData.process.title}
-          steps={mobileData.process.steps}
-        />
-
-        {/* Deliverables */}
-        <Deliverables
-          title={mobileData.deliverables.title}
-          items={mobileData.deliverables.items}
-        />
-
-        {/* Getting Started */}
-        <GettingStarted
-          title={mobileData.gettingStarted.title}
-          items={mobileData.gettingStarted.items}
-        />
-
-        {/* Mobile App Setup Wizard */}
-        <section className="py-20 bg-gradient-to-br from-primary/5 via-white to-brand-sky-light/10">
+        {/* Interactive Planning System */}
+        <section className="py-20 bg-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
               className="text-center mb-12"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                {lang === 'ar' ? 'اطلب تطبيقك المحمول الآن' : 'Start Your Mobile App Project'}
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                {lang === 'ar' ? 'خطط تطبيقك خطوة بخطوة' : 'Plan Your App Step by Step'}
               </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                {lang === 'ar' 
-                  ? 'أكمل النموذج المبسط من ثلاث خطوات لتحصل على عرض سعر مخصص لمشروعك'
-                  : 'Complete our simple 3-step form to get a customized quote for your project'
-                }
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                {lang === 'ar' ? 'نظام تخطيط تفاعلي لتحديد متطلبات تطبيقك بدقة' : 'Interactive planning system to define your app requirements precisely'}
               </p>
             </motion.div>
-            
-            <MobileAppWizard />
-          </div>
-        </section>
 
-        {/* Mobile Apps Examples Section */}
-        <section className="py-20 bg-gray-50">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-6xl mx-auto">
-              {/* Section Header */}
-              <motion.div
-                className="text-center mb-16"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-              >
-                <h2 className="text-3xl md:text-4xl font-bold text-brand-text-primary mb-6">
-                  {dir === 'rtl' ? 'أمثلة من التطبيقات المطورة' : 'Mobile App Examples'}
-                </h2>
-                <p className="text-xl text-brand-text-muted max-w-3xl mx-auto leading-relaxed">
-                  {dir === 'rtl' 
-                    ? 'تصفح مجموعة متنوعة من التطبيقات المحمولة التي يمكننا تطويرها لك، كل تطبيق مصمم بعناية ليلبي احتياجاتك الخاصة'
-                    : 'Browse a variety of mobile applications we can develop for you, each app carefully designed to meet your specific needs'
-                  }
-                </p>
-              </motion.div>
-
-              {/* Category Filters */}
-              <motion.div
-                className="flex flex-wrap justify-center gap-4 mb-12"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true }}
-              >
-                {getAppCategories().map((category) => (
-                  <Button
-                    key={category.id}
-                    onClick={() => setSelectedAppCategory(category.id)}
-                    variant={selectedAppCategory === category.id ? "default" : "outline"}
-                    className={cn(
-                      "rounded-xl px-6 py-3 font-medium transition-all duration-300",
-                      selectedAppCategory === category.id
-                        ? "bg-primary text-white shadow-lg"
-                        : "hover:bg-primary/10 hover:border-primary"
-                    )}
-                    data-testid={`category-filter-${category.id}`}
-                  >
-                    {category.name}
-                  </Button>
-                ))}
-              </motion.div>
-
-              {/* Apps Grid */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={selectedAppCategory}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4 }}
-                  className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-                >
-                  {getFilteredApps().map((app, index) => (
-                    <motion.div
-                      key={`${selectedAppCategory}-${index}`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: index * 0.1 }}
+            {/* Steps Progress Bar */}
+            <div className="mb-12">
+              <div className="flex items-center justify-center">
+                {planSteps.map((step, index) => (
+                  <div key={step.id} className="flex items-center">
+                    <div 
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300",
+                        planningState.currentStep >= step.id 
+                          ? "bg-primary text-white" 
+                          : "bg-gray-200 text-gray-600"
+                      )}
                     >
-                      <Card className="h-full hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary">
-                        <CardHeader>
-                          <CardTitle className="text-lg font-bold text-brand-text-primary flex items-center gap-2">
-                            <Smartphone className="w-5 h-5 text-primary" />
-                            {app.name}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-brand-text-muted mb-4 leading-relaxed">
-                            {app.description}
-                          </p>
-                          <div className="space-y-4">
-                            <div>
-                              <h4 className="font-semibold text-brand-text-primary text-sm mb-2">
-                                {dir === 'rtl' ? 'الميزات الرئيسية:' : 'Key Features:'}
-                              </h4>
-                              <div className="flex flex-wrap gap-2">
-                                {app.features.map((feature, featureIndex) => (
-                                  <Badge 
-                                    key={featureIndex} 
-                                    variant="secondary" 
-                                    className="text-xs"
-                                  >
-                                    {feature}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                            
-                            {/* Action Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              {/* View Details Button */}
-                              <Button
-                                onClick={() => {
-                                  setSelectedAppForDetails(app);
-                                  setShowAppDetailsModal(true);
-                                }}
-                                variant="outline"
-                                className="flex-1 border-primary text-primary hover:bg-primary hover:text-white rounded-xl transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
-                                size="sm"
-                                aria-label={`View details for ${app.name}`}
-                                data-testid={`view-details-app-${app.name.replace(/\s+/g, '-')}`}
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                <span className="font-medium">
-                                  {dir === 'rtl' ? 'عرض التفاصيل' : 'View Details'}
-                                </span>
-                              </Button>
-                              
-                              {/* Apply Now Button */}
-                              <Button
-                                onClick={() => {
-                                  // Navigate to contact page with app name pre-selected
-                                  setLocation(`/contact?service=${encodeURIComponent(app.name)}`);
-                                }}
-                                className="flex-1 bg-primary hover:bg-primary-dark text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
-                                size="sm"
-                                aria-label={`Apply for ${app.name}`}
-                                data-testid={`apply-app-${app.name.replace(/\s+/g, '-')}`}
-                              >
-                                <span className="font-medium">
-                                  {dir === 'rtl' ? 'اطلب الآن' : 'Apply Now'}
-                                </span>
-                                <ArrowRight 
-                                  className={cn(
-                                    "w-4 h-4 ml-2 transition-transform duration-200",
-                                    dir === 'rtl' && "rotate-180 ml-0 mr-2"
-                                  )} 
-                                />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Call to Action for Custom App */}
-              <motion.div
-                className="mt-16 text-center"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-              >
-                <div className="bg-gradient-to-r from-primary/10 to-brand-sky-accent/10 rounded-2xl p-8">
-                  <h3 className="text-2xl font-bold text-brand-text-primary mb-4">
-                    {dir === 'rtl' ? 'لديك فكرة تطبيق مختلفة؟' : 'Have a Different App Idea?'}
-                  </h3>
-                  <p className="text-brand-text-muted mb-6 max-w-2xl mx-auto">
-                    {dir === 'rtl' 
-                      ? 'نطور تطبيقات الهواتف المحمولة المخصصة حسب احتياجاتك الخاصة - أخبرنا عن فكرتك وسنحولها إلى تطبيق احترافي' 
-                      : 'We develop custom mobile applications based on your specific needs - tell us your idea and we\'ll turn it into professional mobile app'
-                    }
-                  </p>
-                  <Button 
-                    onClick={() => setLocation('/contact')}
-                    size="lg" 
-                    className="rounded-xl px-8 py-3"
-                  >
-                    {dir === 'rtl' ? 'ناقش فكرتك معنا' : 'Discuss Your Idea'}
-                  </Button>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* Final CTA Section */}
-        <section className="py-20 bg-gradient-to-br from-primary to-brand-sky-base text-white">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="max-w-3xl mx-auto space-y-8">
-              <h2 className="text-3xl md:text-4xl font-bold leading-tight">
-                {mobileData.cta.title}
-              </h2>
-              <p className="text-xl text-white/90 leading-relaxed">
-                {mobileData.cta.desc}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <div>
-                  <button
-                    onClick={() => window.location.href = '/contact?service=mobile-apps'}
-                    className="bg-white text-primary hover:bg-gray-100 px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium"
-                    data-testid="final-cta-primary"
-                  >
-                    {mobileData.cta.primary}
-                  </button>
-                </div>
-                <div>
-                  <button
-                    onClick={() => window.location.href = '/contact?service=mobile-apps&type=consultation'}
-                    className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-4 rounded-2xl transition-all duration-300 font-medium"
-                    data-testid="final-cta-secondary"
-                  >
-                    {mobileData.cta.secondary}
-                  </button>
-                </div>
+                      {planningState.currentStep > step.id ? (
+                        <CheckCircle className="w-5 h-5" />
+                      ) : (
+                        step.id
+                      )}
+                    </div>
+                    {index < planSteps.length - 1 && (
+                      <div 
+                        className={cn(
+                          "w-16 h-1 mx-2 transition-all duration-300",
+                          planningState.currentStep > step.id 
+                            ? "bg-primary" 
+                            : "bg-gray-200"
+                        )}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="text-center mt-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {planSteps[planningState.currentStep - 1]?.title}
+                </h3>
+                <p className="text-gray-600">
+                  {planSteps[planningState.currentStep - 1]?.description}
+                </p>
               </div>
             </div>
-          </div>
-        </section>
 
-        {/* Sticky Mobile CTA */}
-        <StickyCTA
-          title={mobileData.cta.title}
-          description={mobileData.cta.desc}
-          primaryLabel={mobileData.cta.primary}
-          secondaryLabel={mobileData.cta.secondary}
-        />
-
-        {/* App Details Modal */}
-        {selectedAppForDetails && (
-          <Dialog open={showAppDetailsModal} onOpenChange={setShowAppDetailsModal}>
-            <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto 
-              sm:max-h-[90vh] sm:m-4 m-2 
-              w-[calc(100vw-16px)] sm:w-auto
-              p-4 sm:p-6 
-              rounded-xl sm:rounded-2xl
-              scroll-smooth">
-              <DialogHeader className="pb-4">
-                <DialogTitle className="text-xl sm:text-2xl font-bold text-brand-text-primary flex items-start sm:items-center gap-3 leading-tight">
-                  <Smartphone className="w-5 h-5 sm:w-6 sm:h-6 text-primary mt-1 sm:mt-0 flex-shrink-0" />
-                  <span className="break-words">{selectedAppForDetails.name}</span>
-                </DialogTitle>
-              </DialogHeader>
-              
-              {(() => {
-                const appDetails = getDetailedAppInfo(selectedAppForDetails.name);
-                if (!appDetails) {
-                  // Show fallback content when detailed app info is not available
-                  return (
-                    <div className="space-y-6 py-4">
-                      <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-4 sm:p-6">
-                        <h3 className="text-lg sm:text-xl font-bold text-brand-text-primary mb-3">
-                          {dir === 'rtl' ? 'نظرة عامة' : 'Overview'}
-                        </h3>
-                        <p className="text-brand-text-muted leading-relaxed">
-                          {selectedAppForDetails.description}
-                        </p>
-                      </div>
-
-                      <div className="bg-green-50 rounded-lg p-4 w-full sm:max-w-md">
-                        <h4 className="font-bold text-green-800 mb-2">
-                          {dir === 'rtl' ? 'مدة التطوير' : 'Development Timeline'}
-                        </h4>
-                        <p className="text-green-700 text-lg font-semibold">
-                          {dir === 'rtl' ? '4-6 أسابيع' : '4-6 weeks'}
-                        </p>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg sm:text-xl font-bold text-brand-text-primary mb-4 flex items-center gap-2">
-                          <Star className="w-5 h-5 text-primary" />
-                          {dir === 'rtl' ? 'المميزات الرئيسية' : 'Key Features'}
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {selectedAppForDetails.features?.map((feature: string, index: number) => (
-                            <div key={index} className="flex items-start gap-3 p-3 sm:p-4 bg-gray-50 rounded-lg touch-manipulation">
-                              <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                              <span className="text-brand-text-muted">{feature}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-6 border-t mt-2">
-                        <Button
-                          onClick={() => {
-                            setShowAppDetailsModal(false);
-                            setLocation(`/contact?service=${encodeURIComponent(selectedAppForDetails.name)}`);
-                          }}
-                          className="flex-1 bg-primary hover:bg-primary-dark text-white rounded-xl py-4 sm:py-3 min-h-[48px] touch-manipulation"
-                          size="lg"
-                        >
-                          <ArrowRight className={cn(
-                            "w-5 h-5 mr-2",
-                            dir === 'rtl' && "rotate-180 mr-0 ml-2"
-                          )} />
-                          {dir === 'rtl' ? 'اطلب هذا التطبيق الآن' : 'Request This App Now'}
-                        </Button>
-                        <Button
-                          onClick={() => setShowAppDetailsModal(false)}
-                          variant="outline"
-                          className="flex-1 rounded-xl py-4 sm:py-3 min-h-[48px] border-2 touch-manipulation"
-                          size="lg"
-                        >
-                          {dir === 'rtl' ? 'إغلاق' : 'Close'}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
-                    {/* Overview Section */}
-                    <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-4 sm:p-6">
-                      <h3 className="text-lg sm:text-xl font-bold text-brand-text-primary mb-3">
-                        {dir === 'rtl' ? 'نظرة عامة' : 'Overview'}
-                      </h3>
-                      <p className="text-brand-text-muted leading-relaxed">
-                        {appDetails.fullDescription}
-                      </p>
+            {/* Step Content */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={planningState.currentStep}
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+                className="max-w-6xl mx-auto"
+              >
+                {/* Step 1: App Type Selection */}
+                {planningState.currentStep === 1 && (
+                  <div className="space-y-8">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {getAppTypes().map((appType) => {
+                        const IconComponent = appType.icon;
+                        const isSelected = planningState.selectedAppType === appType.id;
+                        
+                        return (
+                          <motion.div
+                            key={appType.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                          >
+                            <Card 
+                              className={cn(
+                                "cursor-pointer transition-all duration-300 hover:shadow-lg",
+                                appType.bgColor,
+                                isSelected && "ring-2 ring-primary shadow-lg scale-105"
+                              )}
+                              onClick={() => setPlanningState(prev => ({ 
+                                ...prev, 
+                                selectedAppType: appType.id 
+                              }))}
+                              data-testid={`card-app-type-${appType.id}`}
+                            >
+                              <CardContent className="p-6 text-center space-y-4">
+                                <div className={cn(
+                                  "w-16 h-16 mx-auto rounded-2xl flex items-center justify-center transition-transform duration-300",
+                                  `bg-${appType.color}-500`,
+                                  isSelected && "scale-110"
+                                )}>
+                                  <IconComponent className="w-8 h-8 text-white" />
+                                </div>
+                                
+                                <h3 className="text-xl font-bold text-gray-900">
+                                  {appType.name}
+                                </h3>
+                                
+                                <p className="text-gray-600">
+                                  {appType.description}
+                                </p>
+                                
+                                <div className="space-y-2">
+                                  {appType.features.map((feature, index) => (
+                                    <div key={index} className="flex items-center text-sm text-gray-700">
+                                      <CheckCircle className="w-4 h-4 text-primary mr-2" />
+                                      {feature}
+                                    </div>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
                     </div>
 
-                    {/* Timeline Only */}
-                    <div className="bg-green-50 rounded-lg p-4 w-full sm:max-w-md">
-                      <h4 className="font-bold text-green-800 mb-2">
-                        {dir === 'rtl' ? 'مدة التطوير' : 'Development Timeline'}
-                      </h4>
-                      <p className="text-green-700 text-lg font-semibold">{appDetails.timeline}</p>
-                    </div>
-
-                    {/* Key Features */}
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-bold text-brand-text-primary mb-4 flex items-center gap-2">
-                        <Star className="w-5 h-5 text-primary" />
-                        {dir === 'rtl' ? 'المميزات الرئيسية' : 'Key Features'}
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {appDetails.keyFeatures.map((feature: string, index: number) => (
-                          <div key={index} className="flex items-start gap-3 p-3 sm:p-4 bg-gray-50 rounded-lg touch-manipulation">
-                            <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                            <span className="text-brand-text-muted">{feature}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Technical Features */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg sm:text-xl font-bold text-brand-text-primary mb-4 flex items-center gap-2">
-                        <Globe className="w-5 h-5 text-primary" />
-                        {dir === 'rtl' ? 'المميزات التقنية' : 'Technical Features'}
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {appDetails.technicalFeatures.map((feature: string, index: number) => (
-                          <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                            <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                            <span className="text-blue-800">{feature}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Benefits */}
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-bold text-brand-text-primary mb-4 flex items-center gap-2">
-                        <Heart className="w-5 h-5 text-primary" />
-                        {dir === 'rtl' ? 'الفوائد والمزايا' : 'Benefits & Advantages'}
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {appDetails.benefits.map((benefit: string, index: number) => (
-                          <div key={index} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
-                            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                            <span className="text-green-800">{benefit}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Target Audience */}
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-bold text-brand-text-primary mb-4 flex items-center gap-2">
-                        <Users className="w-5 h-5 text-primary" />
-                        {dir === 'rtl' ? 'الفئة المستهدفة' : 'Target Audience'}
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {appDetails.targetAudience.map((audience: string, index: number) => (
-                          <Badge key={index} variant="secondary" className="px-3 py-1">
-                            {audience}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Technologies */}
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-bold text-brand-text-primary mb-4 flex items-center gap-2">
-                        <Brain className="w-5 h-5 text-primary" />
-                        {dir === 'rtl' ? 'التقنيات المستخدمة' : 'Technologies Used'}
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {appDetails.technologies.map((tech: string, index: number) => (
-                          <Badge key={index} variant="outline" className="px-3 py-1 border-primary text-primary">
-                            {tech}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-6 border-t mt-2">
-                      <Button
-                        onClick={() => {
-                          setShowAppDetailsModal(false);
-                          setLocation(`/contact?service=${encodeURIComponent(selectedAppForDetails.name)}`);
-                        }}
-                        className="flex-1 bg-primary hover:bg-primary-dark text-white rounded-xl py-4 sm:py-3 min-h-[48px] touch-manipulation"
+                    <div className="text-center">
+                      <Button 
                         size="lg"
+                        disabled={!planningState.selectedAppType}
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 2 }))}
+                        className="px-8 py-4"
+                        data-testid="button-next-step-1"
                       >
-                        <ArrowRight className={cn(
-                          "w-5 h-5 mr-2",
-                          dir === 'rtl' && "rotate-180 mr-0 ml-2"
-                        )} />
-                        {dir === 'rtl' ? 'اطلب هذا التطبيق الآن' : 'Request This App Now'}
-                      </Button>
-                      <Button
-                        onClick={() => setShowAppDetailsModal(false)}
-                        variant="outline"
-                        className="flex-1 rounded-xl py-4 sm:py-3 min-h-[48px] border-2 touch-manipulation"
-                        size="lg"
-                      >
-                        {dir === 'rtl' ? 'إغلاق' : 'Close'}
+                        {lang === 'ar' ? 'التالي: اختيار الميزات' : 'Next: Select Features'}
+                        <ArrowRight className={cn("w-5 h-5 ml-2", dir === 'rtl' && "rotate-180 ml-0 mr-2")} />
                       </Button>
                     </div>
                   </div>
+                )}
+
+                {/* Step 2: Features Selection */}
+                {planningState.currentStep === 2 && (
+                  <div className="space-y-8">
+                    <Alert>
+                      <Star className="h-4 w-4" />
+                      <AlertDescription>
+                        {lang === 'ar' ? 'اختر الميزات التي تحتاجها في تطبيقك. يمكنك اختيار عدة ميزات.' : 'Select the features you need in your app. You can choose multiple features.'}
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="space-y-6">
+                      {['core', 'business', 'technical', 'social'].map((category) => {
+                        const categoryFeatures = getFeatures().filter(f => f.category === category);
+                        const categoryNames = {
+                          core: lang === 'ar' ? 'الميزات الأساسية' : 'Core Features',
+                          business: lang === 'ar' ? 'ميزات الأعمال' : 'Business Features', 
+                          technical: lang === 'ar' ? 'الميزات التقنية' : 'Technical Features',
+                          social: lang === 'ar' ? 'الميزات الاجتماعية' : 'Social Features'
+                        };
+
+                        return (
+                          <div key={category} className="space-y-4">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                              <Globe className="w-5 h-5 text-primary" />
+                              {categoryNames[category as keyof typeof categoryNames]}
+                            </h3>
+                            
+                            <div className="grid md:grid-cols-2 gap-4">
+                              {categoryFeatures.map((feature) => {
+                                const isSelected = planningState.selectedFeatures.includes(feature.id);
+                                
+                                return (
+                                  <Card
+                                    key={feature.id}
+                                    className={cn(
+                                      "cursor-pointer transition-all duration-300 hover:shadow-md",
+                                      isSelected && "ring-2 ring-primary bg-primary/5"
+                                    )}
+                                    onClick={() => {
+                                      if (feature.isRequired) return;
+                                      
+                                      setPlanningState(prev => ({
+                                        ...prev,
+                                        selectedFeatures: isSelected 
+                                          ? prev.selectedFeatures.filter(id => id !== feature.id)
+                                          : [...prev.selectedFeatures, feature.id]
+                                      }));
+                                    }}
+                                    data-testid={`card-feature-${feature.id}`}
+                                  >
+                                    <CardContent className="p-4">
+                                      <div className="flex items-start gap-3">
+                                        <div className={cn(
+                                          "mt-1 transition-colors duration-300",
+                                          isSelected || feature.isRequired ? "text-primary" : "text-gray-400"
+                                        )}>
+                                          <CheckCircle className="w-5 h-5" />
+                                        </div>
+                                        
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <h4 className="font-semibold text-gray-900">
+                                              {feature.name}
+                                            </h4>
+                                            {feature.isRequired && (
+                                              <Badge variant="secondary" className="text-xs">
+                                                {lang === 'ar' ? 'مطلوب' : 'Required'}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <p className="text-sm text-gray-600">
+                                            {feature.description}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex justify-between">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 1 }))}
+                        data-testid="button-prev-step-2"
+                      >
+                        <ArrowRight className={cn("w-5 h-5 mr-2 rotate-180", dir === 'rtl' && "rotate-0 mr-0 ml-2")} />
+                        {lang === 'ar' ? 'السابق' : 'Previous'}
+                      </Button>
+                      
+                      <Button 
+                        size="lg"
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 3 }))}
+                        data-testid="button-next-step-2"
+                      >
+                        {lang === 'ar' ? 'التالي: التخصصات' : 'Next: Specializations'}
+                        <ArrowRight className={cn("w-5 h-5 ml-2", dir === 'rtl' && "rotate-180 ml-0 mr-2")} />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Specializations Selection */}
+                {planningState.currentStep === 3 && (
+                  <div className="space-y-8">
+                    <Alert>
+                      <Star className="h-4 w-4" />
+                      <AlertDescription>
+                        {lang === 'ar' ? 'اختر التخصصات والمجالات التي تناسب مشروعك. يمكنك اختيار عدة تخصصات.' : 'Select the specializations and domains that fit your project. You can choose multiple specializations.'}
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {getSpecializations().map((specialization) => {
+                        const IconComponent = specialization.icon;
+                        const isSelected = planningState.selectedSpecializations.includes(specialization.id);
+                        
+                        return (
+                          <motion.div
+                            key={specialization.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                          >
+                            <Card 
+                              className={cn(
+                                "cursor-pointer transition-all duration-300 hover:shadow-lg h-full",
+                                isSelected && "ring-2 ring-primary shadow-lg scale-105 bg-primary/5"
+                              )}
+                              onClick={() => setPlanningState(prev => ({ 
+                                ...prev, 
+                                selectedSpecializations: isSelected 
+                                  ? prev.selectedSpecializations.filter(id => id !== specialization.id)
+                                  : [...prev.selectedSpecializations, specialization.id]
+                              }))}
+                              data-testid={`card-specialization-${specialization.id}`}
+                            >
+                              <CardContent className="p-6 text-center space-y-4 h-full flex flex-col">
+                                <div className={cn(
+                                  "w-16 h-16 mx-auto rounded-2xl flex items-center justify-center transition-transform duration-300",
+                                  `bg-${specialization.color}-500`,
+                                  isSelected && "scale-110"
+                                )}>
+                                  <IconComponent className="w-8 h-8 text-white" />
+                                </div>
+                                
+                                <div className="flex-1 flex flex-col justify-center">
+                                  <h3 className="text-lg font-bold text-gray-900 mb-2">
+                                    {specialization.name}
+                                  </h3>
+                                  
+                                  <p className="text-gray-600 text-sm leading-relaxed">
+                                    {specialization.description}
+                                  </p>
+                                </div>
+                                
+                                {isSelected && (
+                                  <div className="text-primary">
+                                    <CheckCircle className="w-6 h-6 mx-auto" />
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex justify-between">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 2 }))}
+                        data-testid="button-prev-step-3"
+                      >
+                        <ArrowRight className={cn("w-5 h-5 mr-2 rotate-180", dir === 'rtl' && "rotate-0 mr-0 ml-2")} />
+                        {lang === 'ar' ? 'السابق' : 'Previous'}
+                      </Button>
+                      
+                      <Button 
+                        size="lg"
+                        onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 4 }))}
+                        data-testid="button-next-step-3"
+                      >
+                        {lang === 'ar' ? 'التالي: تفاصيل المشروع' : 'Next: Project Details'}
+                        <ArrowRight className={cn("w-5 h-5 ml-2", dir === 'rtl' && "rotate-180 ml-0 mr-2")} />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Steps 4, 5, 6 - Project Details, Files, Contact Info */}
+                {planningState.currentStep > 3 && (
+                  <div className="text-center py-20">
+                    <div className="max-w-md mx-auto space-y-6">
+                      <div className="w-20 h-20 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+                        <Monitor className="w-10 h-10 text-primary" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900">
+                        {lang === 'ar' ? 'قريباً' : 'Coming Soon'}
+                      </h3>
+                      <p className="text-gray-600">
+                        {lang === 'ar' ? 
+                          'باقي خطوات التخطيط قيد التطوير. يمكنك التواصل معنا مباشرة لإكمال طلبك.' : 
+                          'Remaining planning steps are under development. You can contact us directly to complete your request.'
+                        }
+                      </p>
+                      <Button 
+                        onClick={() => setLocation('/contact?service=mobile-apps')}
+                        className="w-full"
+                      >
+                        {lang === 'ar' ? 'تواصل معنا' : 'Contact Us'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </section>
+
+        {/* Features Overview Section */}
+        <section className="py-20 bg-gray-50">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              className="text-center mb-16"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                {mobileData.features.title}
+              </h2>
+              <div className="w-24 h-1 bg-gradient-to-r from-primary to-purple-600 rounded-full mx-auto" />
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {mobileData.features.items.map((feature: any, index: number) => {
+                const icons = {
+                  Shield: Shield,
+                  Languages: Globe,
+                  Rocket: Rocket,
+                  Smartphone: Smartphone,
+                  MessageCircle: Heart,
+                  Bell: Zap
+                };
+                const IconComponent = icons[feature.icon as keyof typeof icons] || Shield;
+                
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    viewport={{ once: true }}
+                  >
+                    <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                      <CardContent className="p-8 text-center space-y-4">
+                        <motion.div
+                          className="w-16 h-16 mx-auto bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
+                          whileHover={{ rotate: 5 }}
+                        >
+                          <IconComponent className="w-8 h-8 text-white" />
+                        </motion.div>
+                        
+                        <h3 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300">
+                          {feature.title}
+                        </h3>
+                        
+                        <p className="text-gray-600 leading-relaxed">
+                          {feature.desc}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 );
-              })()}
-            </DialogContent>
-          </Dialog>
-        )}
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-20 bg-gradient-to-r from-primary to-purple-600">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+              className="max-w-3xl mx-auto"
+            >
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+                {mobileData.cta.title}
+              </h2>
+              <p className="text-xl text-white/90 mb-8">
+                {mobileData.cta.desc}
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  size="lg" 
+                  variant="secondary"
+                  className="bg-white text-primary hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold"
+                  onClick={() => setPlanningState(prev => ({ ...prev, currentStep: 1 }))}
+                >
+                  {mobileData.cta.primary}
+                </Button>
+                
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-4 rounded-xl font-semibold"
+                  onClick={() => setLocation('/contact?service=mobile-apps')}
+                >
+                  {mobileData.cta.secondary}
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        </section>
       </main>
     </>
   );
