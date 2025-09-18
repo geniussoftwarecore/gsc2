@@ -1,5 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { AuthenticatedRequest, requireAuth, requireRole, loginUser } from "./auth";
 import { DatabaseStorage } from "./database-storage";
@@ -29,6 +32,53 @@ import {
 import { z } from "zod";
 import { createObjectCsvWriter } from 'csv-writer';
 import { generateToken } from "./auth";
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(process.cwd(), 'uploads/mobile-app-orders');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const multerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename with timestamp and random string
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+    const fileExtension = path.extname(file.originalname);
+    const baseName = path.basename(file.originalname, fileExtension);
+    const cleanBaseName = baseName.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 50);
+    cb(null, `${cleanBaseName}-${uniqueSuffix}${fileExtension}`);
+  }
+});
+
+// File validation
+const fileFilter = (req: any, file: any, cb: any) => {
+  const allowedTypes = [
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf',
+    'application/msword', 
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
+  ];
+  
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`File type ${file.mimetype} is not allowed`), false);
+  }
+};
+
+const upload = multer({
+  storage: multerStorage,
+  fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
+    files: 5 // Maximum 5 files
+  }
+});
 
 // Error codes enum for consistent error handling
 enum ServiceErrorCodes {
@@ -325,18 +375,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mobile App Orders - Create new mobile app order
-  app.post("/api/mobile-app-orders", async (req, res) => {
+  app.post("/api/mobile-app-orders", upload.array('attachedFiles', 5), async (req, res) => {
     try {
       let validatedData;
       
       // Handle both FormData (with files) and regular JSON data
       if (req.is('multipart/form-data')) {
-        // FormData handling would require multer middleware
-        // For now, we'll handle regular JSON and add file support later
-        return res.status(400).json({
-          success: false,
-          message: "File uploads not yet implemented. Please submit without files for now."
-        });
+        // Extract form data and files
+        const formData = req.body;
+        const files = req.files as Express.Multer.File[];
+        
+        // Parse selectedFeatures from JSON string to array
+        let selectedFeatures: string[] = [];
+        if (formData.selectedFeatures) {
+          try {
+            selectedFeatures = JSON.parse(formData.selectedFeatures);
+          } catch (parseError) {
+            return res.status(400).json({
+              success: false,
+              message: "Invalid selectedFeatures format. Must be valid JSON array."
+            });
+          }
+        }
+        
+        // Process uploaded files
+        const attachedFiles = files?.map(file => ({
+          id: Math.random().toString(36).substr(2, 9),
+          filename: file.filename,
+          originalName: file.originalname,
+          size: file.size,
+          mimeType: file.mimetype,
+          uploadedAt: new Date().toISOString()
+        })) || [];
+        
+        // Prepare data for validation
+        const requestData = {
+          ...formData,
+          selectedFeatures,
+          attachedFiles
+        };
+        
+        // Validate with Zod schema
+        validatedData = insertMobileAppOrderSchema.parse(requestData);
+        
       } else {
         // Regular JSON data
         validatedData = insertMobileAppOrderSchema.parse(req.body);
@@ -351,12 +432,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Mobile app order created successfully"
       });
     } catch (error) {
+      // Clean up uploaded files on error
+      if (req.files) {
+        const files = req.files as Express.Multer.File[];
+        files.forEach(file => {
+          fs.unlink(file.path, (unlinkError) => {
+            if (unlinkError) console.error('Failed to delete uploaded file:', unlinkError);
+          });
+        });
+      }
+      
       if (error instanceof z.ZodError) {
         res.status(400).json({ 
           success: false, 
           message: "Validation error", 
           errors: error.errors 
         });
+      } else if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+          res.status(400).json({
+            success: false,
+            message: "File too large. Maximum size is 10MB per file."
+          });
+        } else if (error.code === 'LIMIT_FILE_COUNT') {
+          res.status(400).json({
+            success: false,
+            message: "Too many files. Maximum 5 files allowed."
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            message: `File upload error: ${error.message}`
+          });
+        }
       } else {
         console.error('Mobile app order creation error:', error);
         res.status(500).json({ 

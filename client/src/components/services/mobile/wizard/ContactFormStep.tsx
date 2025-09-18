@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/lang";
 import { useForm } from "react-hook-form";
@@ -98,9 +98,9 @@ export function ContactFormStep({
 
   // Watch all form values and update parent
   const watchedValues = watch();
-  useState(() => {
+  useEffect(() => {
     onFormDataChange(watchedValues);
-  });
+  }, [watchedValues, onFormDataChange]);
 
   // Get app type name
   const getAppTypeName = () => {

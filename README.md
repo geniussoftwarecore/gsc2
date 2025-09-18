@@ -2,6 +2,25 @@
 
 A comprehensive software development and CRM system built with modern web technologies.
 
+## Stack & Design Profile (Auto-detected)
+
+**Framework:** React 18 + Vite + TypeScript  
+**UI System:** TailwindCSS + shadcn/ui + Radix UI components  
+**Font:** Cairo (Google Fonts) - ⚠️ *Production Issue: External font dependency*  
+**Theme/Palette:** Custom design system with CSS variables
+- Primary: `hsl(213, 94%, 68%)` (GSC Light Blue)
+- Primary Dark: `hsl(213, 87%, 60%)` (GSC Darker Blue)  
+- Brand Sky: `hsl(204, 100%, 90%)` to `hsl(200, 100%, 73%)`
+- Full dark/light mode support with CSS variables
+
+**Architecture:** Full-stack TypeScript
+- Backend: Express.js + PostgreSQL + Drizzle ORM
+- Frontend: React + Wouter routing + Framer Motion animations
+- Language: Arabic/English bilingual with complete RTL support
+- Styling: Design tokens system (`shared/ui/tokens.ts`)
+
+**⚠️ Production Warning:** External Google Fonts dependency should be replaced with local fonts for production.
+
 ## Quick Start
 
 ```bash
