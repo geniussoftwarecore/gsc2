@@ -762,12 +762,12 @@ export default function ServiceDetailClean() {
                 variant="outline"
                 className="flex-1"
                 onClick={() => {
-                  setLocation('/contact?service=mobile-apps');
+                  setLocation(`/contact?service=mobile-apps&app=${encodeURIComponent(selectedAppDetails.title)}&category=${selectedAppDetails.category}&serviceName=${encodeURIComponent(service?.title || 'تطوير تطبيقات الهواتف الذكية')}`);
                   handleCloseModal();
                 }}
-                data-testid={`button-discuss-modal-${selectedAppDetails.id}`}
+                data-testid={`button-request-modal-${selectedAppDetails.id}`}
               >
-                {t('mobileAppPage.details.discussApp', 'ناقش التطبيق')}
+                {t('mobileAppPage.details.requestApp', 'اطلب التطبيق')}
               </Button>
             </motion.div>
           </div>
@@ -1224,10 +1224,10 @@ export default function ServiceDetailClean() {
                             variant="outline" 
                             size="sm" 
                             className="flex-1 border-primary text-primary hover:bg-primary hover:text-white"
-                            onClick={() => setLocation('/contact?service=mobile-apps')}
-                            data-testid={`button-discuss-${card.id}`}
+                            onClick={() => setLocation(`/contact?service=mobile-apps&app=${encodeURIComponent(card.title)}&category=${card.category}&serviceName=${encodeURIComponent(service?.title || 'تطوير تطبيقات الهواتف الذكية')}`)}
+                            data-testid={`button-request-${card.id}`}
                           >
-                            {t('mobileAppPage.sections.discussAppButton', 'ناقش التطبيق')}
+                            {t('mobileAppPage.sections.requestAppButton', 'اطلب التطبيق')}
                           </Button>
                         </div>
                       </CardContent>
