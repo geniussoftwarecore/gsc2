@@ -12,7 +12,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { useLanguage } from "@/i18n/lang";
 import { useTranslation } from "@/hooks/useTranslation";
 import { cn } from "@/lib/utils";
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, lazy, Suspense, useCallback } from "react";
 import ConsolidatedERPNextV15Section from "@/components/erpnext/ConsolidatedERPNextV15Section";
 
 // Service interface
@@ -532,6 +532,7 @@ export default function ServiceDetailClean() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedAppDetails, setSelectedAppDetails] = useState<AppCard | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [visibleCards, setVisibleCards] = useState(8);
 
   // Use the translated categories and cards
   const categories = useAppCategories();
@@ -775,26 +776,47 @@ export default function ServiceDetailClean() {
     );
   };
 
-  // Optimized service query
-  const { data: services, isLoading, error } = useQuery<Service[]>({
-    queryKey: ['/api/services'],
+  // Optimized service query - fetch specific service by ID
+  const { data: service, isLoading, error } = useQuery<Service>({
+    queryKey: ['/api/services', id],
+    queryFn: async () => {
+      const response = await fetch(`/api/services/${id}`);
+      if (!response.ok) {
+        throw new Error('Service not found');
+      }
+      return response.json();
+    },
   });
 
-  // Memoized service lookup
-  const service = useMemo(() => {
-    return services?.find(s => s.id === id);
-  }, [services, id]);
-
-  // Filter cards based on selected category
+  // Filter cards based on selected category with performance optimization
   const filteredCards = useMemo(() => {
     if (selectedCategory === 'all') {
       return appCards;
     }
     return appCards.filter(card => card.category === selectedCategory);
+  }, [selectedCategory, appCards]);
+
+  // Optimize category change handler
+  const handleCategoryChange = useCallback((category: string) => {
+    setSelectedCategory(category);
+  }, []);
+
+  // Performance optimization callbacks
+  const loadMoreCards = useCallback(() => {
+    setVisibleCards(prev => Math.min(prev + 8, filteredCards.length));
+  }, [filteredCards.length]);
+
+  const displayedCards = useMemo(() => {
+    return filteredCards.slice(0, visibleCards);
+  }, [filteredCards, visibleCards]);
+
+  // Reset visible cards when category changes
+  useEffect(() => {
+    setVisibleCards(8);
   }, [selectedCategory]);
 
   // Check if this is the mobile app development service
-  const isMobileAppService = service?.id === '916ab8db-091c-43d1-8160-42e187fa722d';
+  const isMobileAppService = service?.id === 'cf28c5c8-e865-4e53-a35b-de1ed08b1a17';
 
   // Loading state
   if (isLoading) {
@@ -1122,7 +1144,7 @@ export default function ServiceDetailClean() {
                       ? "bg-primary text-white shadow-lg"
                       : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
                   )}
-                  onClick={() => setSelectedCategory(category.key)}
+                  onClick={() => handleCategoryChange(category.key)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   data-testid={`filter-${category.key}`}
@@ -1142,7 +1164,7 @@ export default function ServiceDetailClean() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5 }}
               >
-                {filteredCards.map((card, index) => (
+                {displayedCards.map((card, index) => (
                   <motion.div
                     key={card.id}
                     initial={{ opacity: 0, y: 30 }}
@@ -1214,6 +1236,26 @@ export default function ServiceDetailClean() {
                 ))}
               </motion.div>
             </AnimatePresence>
+
+            {/* Load More Button - Only show if there are more cards to load */}
+            {visibleCards < filteredCards.length && (
+              <motion.div
+                className="text-center mt-8"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                viewport={{ once: true }}
+              >
+                <Button
+                  variant="outline"
+                  onClick={loadMoreCards}
+                  className="px-8 py-3 text-primary border-primary hover:bg-primary hover:text-white"
+                  data-testid="button-load-more-cards"
+                >
+                  {t('mobileAppPage.sections.loadMoreButton', 'عرض المزيد')} ({filteredCards.length - visibleCards})
+                </Button>
+              </motion.div>
+            )}
 
             {/* Custom App CTA */}
             <motion.div
