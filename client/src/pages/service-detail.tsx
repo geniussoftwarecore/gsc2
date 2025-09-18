@@ -38,7 +38,7 @@ interface ServiceSubcategory {
   description: string;
   features: string[];
   pricing: string;
-  timeline: string;
+  timeline: Array<{ phase: string; note: string }>;
   technologies: string[];
   targetAudience: string;
   deliverables: string[];
@@ -1032,10 +1032,10 @@ export default function ServiceDetailClean() {
 
                         {/* Timeline and Pricing */}
                         <div className="space-y-2">
-                          {subcategory.timeline && (
+                          {subcategory.timeline && subcategory.timeline.length > 0 && (
                             <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
                               <Calendar className="w-3 h-3 mr-2" />
-                              {subcategory.timeline}
+                              <span>{subcategory.timeline.length} مراحل - {subcategory.timeline.map(t => t.note).join(', ')}</span>
                             </div>
                           )}
                           
