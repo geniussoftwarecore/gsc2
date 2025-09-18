@@ -12,6 +12,7 @@ import { ProcessTimeline } from "@/components/services/mobile/ProcessTimeline";
 import { Deliverables } from "@/components/services/mobile/Deliverables";
 import { GettingStarted } from "@/components/services/mobile/GettingStarted";
 import { StickyCTA } from "@/components/services/mobile/StickyCTA";
+import { MobileAppWizard } from "@/components/services/mobile/wizard/MobileAppWizard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -602,6 +603,31 @@ export default function MobileDetail() {
           title={mobileData.gettingStarted.title}
           items={mobileData.gettingStarted.items}
         />
+
+        {/* Mobile App Setup Wizard */}
+        <section className="py-20 bg-gradient-to-br from-primary/5 via-white to-brand-sky-light/10">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              className="text-center mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                {lang === 'ar' ? 'اطلب تطبيقك المحمول الآن' : 'Start Your Mobile App Project'}
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                {lang === 'ar' 
+                  ? 'أكمل النموذج المبسط من ثلاث خطوات لتحصل على عرض سعر مخصص لمشروعك'
+                  : 'Complete our simple 3-step form to get a customized quote for your project'
+                }
+              </p>
+            </motion.div>
+            
+            <MobileAppWizard />
+          </div>
+        </section>
 
         {/* Mobile Apps Examples Section */}
         <section className="py-20 bg-gray-50">

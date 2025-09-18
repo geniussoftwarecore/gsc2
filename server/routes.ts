@@ -23,7 +23,8 @@ import {
   insertTaskSchema,
   insertCrmActivitySchema,
   insertUserSchema,
-  insertSavedFilterSchema
+  insertSavedFilterSchema,
+  insertMobileAppOrderSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { createObjectCsvWriter } from 'csv-writer';
@@ -315,6 +316,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errors: error.errors 
         });
       } else {
+        res.status(500).json({ 
+          success: false, 
+          message: "Internal server error" 
+        });
+      }
+    }
+  });
+
+  // Mobile App Orders - Create new mobile app order
+  app.post("/api/mobile-app-orders", async (req, res) => {
+    try {
+      let validatedData;
+      
+      // Handle both FormData (with files) and regular JSON data
+      if (req.is('multipart/form-data')) {
+        // FormData handling would require multer middleware
+        // For now, we'll handle regular JSON and add file support later
+        return res.status(400).json({
+          success: false,
+          message: "File uploads not yet implemented. Please submit without files for now."
+        });
+      } else {
+        // Regular JSON data
+        validatedData = insertMobileAppOrderSchema.parse(req.body);
+      }
+        
+      // Create the mobile app order
+      const order = await storage.instance.createMobileAppOrder(validatedData);
+      
+      res.json({ 
+        success: true, 
+        data: order,
+        message: "Mobile app order created successfully"
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ 
+          success: false, 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      } else {
+        console.error('Mobile app order creation error:', error);
         res.status(500).json({ 
           success: false, 
           message: "Internal server error" 

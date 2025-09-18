@@ -38,6 +38,8 @@ import {
   type InsertTicketStatus,
   type ServiceAuditLog,
   type InsertServiceAuditLog,
+  type MobileAppOrder,
+  type InsertMobileAppOrder,
   users,
   contactSubmissions,
   portfolioItems,
@@ -57,7 +59,8 @@ import {
   supportTickets,
   dealStages,
   ticketStatus,
-  serviceAuditLog
+  serviceAuditLog,
+  mobileAppOrders
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -186,6 +189,18 @@ export class DatabaseStorage implements IStorage {
   async getAllContactSubmissions(): Promise<ContactSubmission[]> {
     if (!db) throw new Error("Database not available");
     return await db.select().from(contactSubmissions).orderBy(desc(contactSubmissions.createdAt));
+  }
+
+  // Mobile App Orders
+  async createMobileAppOrder(order: InsertMobileAppOrder): Promise<MobileAppOrder> {
+    if (!db) throw new Error("Database not available");
+    const result = await db.insert(mobileAppOrders).values(order).returning();
+    return result[0];
+  }
+
+  async getAllMobileAppOrders(): Promise<MobileAppOrder[]> {
+    if (!db) throw new Error("Database not available");
+    return await db.select().from(mobileAppOrders).orderBy(desc(mobileAppOrders.createdAt));
   }
 
   // Portfolio Management

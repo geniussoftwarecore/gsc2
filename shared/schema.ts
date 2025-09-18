@@ -760,3 +760,70 @@ export type TicketStatus = typeof ticketStatus.$inferSelect;
 
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
+
+// Mobile App Orders Table
+export const mobileAppOrders = pgTable("mobile_app_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Customer Information
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  customerPhone: text("customer_phone"),
+  customerCompany: text("customer_company"),
+  
+  // App Details
+  appType: text("app_type").notNull(), // ecommerce, education, health, etc.
+  appName: text("app_name"),
+  appDescription: text("app_description"),
+  
+  // Selected Features (JSON array of feature IDs)
+  selectedFeatures: jsonb("selected_features").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  // Additional Requirements
+  additionalRequirements: text("additional_requirements"),
+  
+  // File Attachments
+  attachedFiles: jsonb("attached_files").$type<Array<{
+    id: string;
+    filename: string;
+    originalName: string;
+    size: number;
+    mimeType: string;
+    uploadedAt: string;
+  }>>().default(sql`'[]'::jsonb`),
+  
+  // Budget and Timeline
+  estimatedBudget: text("estimated_budget"),
+  preferredTimeline: text("preferred_timeline"),
+  
+  // Order Status
+  status: text("status").notNull().default("pending"), // pending, reviewed, in_progress, completed, cancelled
+  priority: text("priority").default("normal"), // low, normal, high, urgent
+  
+  // Assignment
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  // Indexes for performance
+  statusIdx: index("mobile_orders_status_idx").on(table.status),
+  appTypeIdx: index("mobile_orders_app_type_idx").on(table.appType),
+  customerEmailIdx: index("mobile_orders_customer_email_idx").on(table.customerEmail),
+  createdAtIdx: index("mobile_orders_created_at_idx").on(table.createdAt),
+  assignedToIdx: index("mobile_orders_assigned_to_idx").on(table.assignedTo),
+  
+  // Composite indexes for common queries
+  statusCreatedIdx: index("mobile_orders_status_created_idx").on(table.status, table.createdAt),
+  appTypeStatusIdx: index("mobile_orders_app_type_status_idx").on(table.appType, table.status),
+}));
+
+// Insert Schema for Mobile App Orders
+export const insertMobileAppOrderSchema = createInsertSchema(mobileAppOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertMobileAppOrder = z.infer<typeof insertMobileAppOrderSchema>;
+export type MobileAppOrder = typeof mobileAppOrders.$inferSelect;

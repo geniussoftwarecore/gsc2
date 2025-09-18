@@ -38,6 +38,8 @@ import {
   type InsertTicketStatus,
   type ServiceAuditLog,
   type InsertServiceAuditLog,
+  type MobileAppOrder,
+  type InsertMobileAppOrder,
   supportTickets,
   dealStages,
   ticketStatus
@@ -57,6 +59,10 @@ export interface IStorage {
   // Contact Submissions
   createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission>;
   getAllContactSubmissions(): Promise<ContactSubmission[]>;
+  
+  // Mobile App Orders
+  createMobileAppOrder(order: InsertMobileAppOrder): Promise<MobileAppOrder>;
+  getAllMobileAppOrders(): Promise<MobileAppOrder[]>;
   
   // Portfolio Management
   getAllPortfolioItems(): Promise<PortfolioItem[]>;
