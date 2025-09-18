@@ -15,9 +15,11 @@ export function Breadcrumbs() {
   const [location] = useLocation();
 
   // Fetch services data to get service names for breadcrumbs
-  const { data: services } = useQuery<any[]>({
+  const { data: servicesResponse } = useQuery<{success: boolean, data: any[]}>({
     queryKey: ["/api/services"],
   });
+  
+  const services = servicesResponse?.data || [];
 
   // Generate breadcrumb items from current path
   const generateBreadcrumbs = () => {

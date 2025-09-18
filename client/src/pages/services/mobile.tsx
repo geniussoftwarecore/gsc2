@@ -17,7 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Smartphone, Eye, ArrowRight, Star, CheckCircle, Globe, Heart, Users, Brain } from "lucide-react";
+import { Smartphone, Eye, ArrowRight, Star, CheckCircle, Globe, Heart, Users, Brain, Monitor } from "lucide-react";
+import { SiAndroid, SiApple } from "react-icons/si";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface MobileServiceData {
@@ -561,6 +563,65 @@ export default function MobileDetail() {
           primaryCta={mobileData.hero.primaryCta}
           secondaryCta={mobileData.hero.secondaryCta}
         />
+
+        {/* Platform Compatibility Section */}
+        <TooltipProvider>
+          <section className="py-8 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <motion.div
+                className="text-center"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+              >
+                <h3 className="text-lg font-semibold text-brand-text-primary mb-4">
+                  {dir === 'rtl' ? 'متوافق مع جميع المنصات' : 'Compatible with All Platforms'}
+                </h3>
+                <div className="flex justify-center items-center gap-8">
+                  {/* iOS Icon */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-default group">
+                        <SiApple className="w-10 h-10 text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
+                        <span className="text-sm font-medium text-brand-text-muted">iOS</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{dir === 'rtl' ? 'متوافق مع iPhone و iPad' : 'Compatible with iPhone & iPad'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Android Icon */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-default group">
+                        <SiAndroid className="w-10 h-10 text-green-600 dark:text-green-500 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors" />
+                        <span className="text-sm font-medium text-brand-text-muted">Android</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{dir === 'rtl' ? 'متوافق مع جميع أجهزة Android' : 'Compatible with all Android devices'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Web App Icon */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-default group">
+                        <Globe className="w-10 h-10 text-blue-600 dark:text-blue-500 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors" />
+                        <span className="text-sm font-medium text-brand-text-muted">{dir === 'rtl' ? 'ويب' : 'Web'}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{dir === 'rtl' ? 'يعمل على جميع المتصفحات' : 'Works on all web browsers'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </motion.div>
+            </div>
+          </section>
+        </TooltipProvider>
 
         {/* Features Grid */}
         <FeatureGrid

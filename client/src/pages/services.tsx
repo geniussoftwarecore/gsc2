@@ -23,9 +23,11 @@ import {
 export default function Services() {
   const { t } = useTranslation();
   const { dir } = useLanguage();
-  const { data: services, isLoading, error } = useQuery<Service[]>({
+  const { data: servicesResponse, isLoading, error } = useQuery<{success: boolean, data: Service[]}>({
     queryKey: ["/api/services"],
   });
+  
+  const services = servicesResponse?.data || [];
 
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
