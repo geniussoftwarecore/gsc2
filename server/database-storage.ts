@@ -73,7 +73,7 @@ export class DatabaseStorage implements IStorage {
     return bcrypt.compare(password, hashedPassword);
   }
 
-  // Audit logging helper method
+  // Audit logging helper method - Enhanced for Transaction Support
   private async createAuditLog(
     serviceId: string | null,
     operation: 'create' | 'update' | 'delete' | 'restore',
@@ -84,9 +84,12 @@ export class DatabaseStorage implements IStorage {
     userRole?: string,
     reason?: string,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
+    // إضافة معامل المعاملة - Add transaction parameter
+    tx?: any
   ): Promise<void> {
-    if (!db) return;
+    const dbInstance = tx || db;
+    if (!dbInstance) return;
     
     try {
       // Calculate changed fields for update operations
@@ -115,7 +118,7 @@ export class DatabaseStorage implements IStorage {
         riskLevel = 'low';
       }
 
-      await db.insert(serviceAuditLog).values({
+      await dbInstance.insert(serviceAuditLog).values({
         serviceId,
         operation,
         tableName: 'services',
@@ -243,7 +246,7 @@ export class DatabaseStorage implements IStorage {
         const result = await tx.insert(services).values(serviceWithAudit).returning();
         const createdService = result[0];
         
-        // Create audit log entry
+        // Create audit log entry within transaction
         await this.createAuditLog(
           createdService.id,
           'create',
@@ -254,7 +257,8 @@ export class DatabaseStorage implements IStorage {
           auditInfo?.userRole,
           auditInfo?.reason || 'Service created',
           auditInfo?.ipAddress,
-          auditInfo?.userAgent
+          auditInfo?.userAgent,
+          tx
         );
         
         return createdService;
@@ -297,7 +301,7 @@ export class DatabaseStorage implements IStorage {
         
         const updatedService = result[0];
         
-        // Create audit log entry
+        // Create audit log entry within transaction
         await this.createAuditLog(
           id,
           'update',
@@ -308,7 +312,8 @@ export class DatabaseStorage implements IStorage {
           auditInfo?.userRole,
           auditInfo?.reason || 'Service updated',
           auditInfo?.ipAddress,
-          auditInfo?.userAgent
+          auditInfo?.userAgent,
+          tx
         );
         
         return updatedService;
@@ -346,7 +351,7 @@ export class DatabaseStorage implements IStorage {
           .where(eq(services.id, id))
           .returning();
         
-        // Create audit log entry
+        // Create audit log entry within transaction
         await this.createAuditLog(
           id,
           'delete',
@@ -357,7 +362,8 @@ export class DatabaseStorage implements IStorage {
           auditInfo?.userRole,
           auditInfo?.reason || 'Service deleted (soft delete)',
           auditInfo?.ipAddress,
-          auditInfo?.userAgent
+          auditInfo?.userAgent,
+          tx
         );
         
         return result.length > 0;
@@ -397,7 +403,7 @@ export class DatabaseStorage implements IStorage {
         
         const restoredService = result[0];
         
-        // Create audit log entry
+        // Create audit log entry within transaction
         await this.createAuditLog(
           id,
           'restore',
@@ -408,7 +414,8 @@ export class DatabaseStorage implements IStorage {
           auditInfo?.userRole,
           auditInfo?.reason || 'Service restored',
           auditInfo?.ipAddress,
-          auditInfo?.userAgent
+          auditInfo?.userAgent,
+          tx
         );
         
         return restoredService;
