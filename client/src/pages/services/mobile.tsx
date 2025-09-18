@@ -578,13 +578,22 @@ export default function MobileDetail() {
                 <h3 className="text-lg font-semibold text-brand-text-primary mb-4">
                   {dir === 'rtl' ? 'متوافق مع جميع المنصات' : 'Compatible with All Platforms'}
                 </h3>
-                <div className="flex justify-center items-center gap-8">
+                <div className="flex justify-center items-center gap-6 sm:gap-8" dir="ltr">
                   {/* iOS Icon */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-default group">
-                        <SiApple className="w-10 h-10 text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
+                      <div 
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-default group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50"
+                        role="img"
+                        aria-label={dir === 'rtl' ? 'متوافق مع iOS - iPhone و iPad' : 'iOS compatible - iPhone and iPad'}
+                        data-testid="icon-ios"
+                      >
+                        <SiApple 
+                          className="w-10 h-10 text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" 
+                          aria-hidden="true"
+                        />
                         <span className="text-sm font-medium text-brand-text-muted">iOS</span>
+                        <span className="sr-only">{dir === 'rtl' ? 'متوافق مع iPhone و iPad' : 'Compatible with iPhone & iPad'}</span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -595,9 +604,18 @@ export default function MobileDetail() {
                   {/* Android Icon */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-default group">
-                        <SiAndroid className="w-10 h-10 text-green-600 dark:text-green-500 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors" />
+                      <div 
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-default group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50"
+                        role="img"
+                        aria-label={dir === 'rtl' ? 'متوافق مع Android - جميع الأجهزة' : 'Android compatible - All devices'}
+                        data-testid="icon-android"
+                      >
+                        <SiAndroid 
+                          className="w-10 h-10 text-emerald-600 dark:text-emerald-500 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors" 
+                          aria-hidden="true"
+                        />
                         <span className="text-sm font-medium text-brand-text-muted">Android</span>
+                        <span className="sr-only">{dir === 'rtl' ? 'متوافق مع جميع أجهزة Android' : 'Compatible with all Android devices'}</span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -608,9 +626,18 @@ export default function MobileDetail() {
                   {/* Web App Icon */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-default group">
-                        <Globe className="w-10 h-10 text-blue-600 dark:text-blue-500 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors" />
+                      <div 
+                        className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-default group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50"
+                        role="img"
+                        aria-label={dir === 'rtl' ? 'تطبيق ويب - يعمل على جميع المتصفحات' : 'Web app - Works on all browsers'}
+                        data-testid="icon-web"
+                      >
+                        <Globe 
+                          className="w-10 h-10 text-blue-600 dark:text-blue-500 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors" 
+                          aria-hidden="true"
+                        />
                         <span className="text-sm font-medium text-brand-text-muted">{dir === 'rtl' ? 'ويب' : 'Web'}</span>
+                        <span className="sr-only">{dir === 'rtl' ? 'يعمل على جميع المتصفحات' : 'Works on all web browsers'}</span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
