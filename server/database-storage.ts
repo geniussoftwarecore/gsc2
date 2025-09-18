@@ -36,6 +36,8 @@ import {
   type InsertDealStage,
   type TicketStatus,
   type InsertTicketStatus,
+  type ServiceAuditLog,
+  type InsertServiceAuditLog,
   users,
   contactSubmissions,
   portfolioItems,
@@ -54,7 +56,8 @@ import {
   savedFilters,
   supportTickets,
   dealStages,
-  ticketStatus
+  ticketStatus,
+  serviceAuditLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -68,6 +71,69 @@ export class DatabaseStorage implements IStorage {
 
   async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
+  }
+
+  // Audit logging helper method
+  private async createAuditLog(
+    serviceId: string | null,
+    operation: 'create' | 'update' | 'delete' | 'restore',
+    oldValues: Record<string, any> | null,
+    newValues: Record<string, any> | null,
+    userId?: string,
+    userName?: string,
+    userRole?: string,
+    reason?: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    if (!db) return;
+    
+    try {
+      // Calculate changed fields for update operations
+      let changedFields: string[] = [];
+      let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low';
+
+      if (operation === 'update' && oldValues && newValues) {
+        changedFields = Object.keys(newValues).filter(key => 
+          JSON.stringify(oldValues[key]) !== JSON.stringify(newValues[key])
+        );
+        
+        // Determine risk level based on changed fields
+        const criticalFields = ['id', 'title', 'category'];
+        const highRiskFields = ['description', 'featured', 'isDeleted'];
+        
+        if (changedFields.some(field => criticalFields.includes(field))) {
+          riskLevel = 'critical';
+        } else if (changedFields.some(field => highRiskFields.includes(field))) {
+          riskLevel = 'high';
+        } else if (changedFields.length > 3) {
+          riskLevel = 'medium';
+        }
+      } else if (operation === 'delete') {
+        riskLevel = 'high';
+      } else if (operation === 'create') {
+        riskLevel = 'low';
+      }
+
+      await db.insert(serviceAuditLog).values({
+        serviceId,
+        operation,
+        tableName: 'services',
+        oldValues,
+        newValues,
+        changedFields,
+        userId,
+        userName,
+        userRole,
+        ipAddress,
+        userAgent,
+        reason,
+        riskLevel
+      });
+    } catch (error) {
+      console.error('Failed to create audit log:', error);
+      // Don't throw here as audit logging should not break main operations
+    }
   }
 
   // User Management
@@ -138,22 +204,219 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  // Services Management
+  // Services Management with Transaction Support and Audit Logging
   async getAllServices(): Promise<Service[]> {
     if (!db) throw new Error("Database not available");
-    return await db.select().from(services);
+    // Only return active (non-deleted) services by default
+    return await db.select().from(services)
+      .where(eq(services.isDeleted, false))
+      .orderBy(desc(services.createdAt));
   }
 
   async getServiceById(id: string): Promise<Service | undefined> {
     if (!db) throw new Error("Database not available");
-    const result = await db.select().from(services).where(eq(services.id, id)).limit(1);
+    const result = await db.select().from(services)
+      .where(and(eq(services.id, id), eq(services.isDeleted, false)))
+      .limit(1);
     return result[0];
   }
 
-  async createService(service: InsertService): Promise<Service> {
+  async createService(
+    service: InsertService, 
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<Service> {
     if (!db) throw new Error("Database not available");
-    const result = await db.insert(services).values(service).returning();
-    return result[0];
+    
+    // Use transaction to ensure atomicity
+    return await db.transaction(async (tx) => {
+      try {
+        // Add audit fields to service data
+        const serviceWithAudit = {
+          ...service,
+          createdBy: auditInfo?.userId || null,
+          updatedBy: auditInfo?.userId || null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isDeleted: false
+        };
+
+        const result = await tx.insert(services).values(serviceWithAudit).returning();
+        const createdService = result[0];
+        
+        // Create audit log entry
+        await this.createAuditLog(
+          createdService.id,
+          'create',
+          null,
+          createdService,
+          auditInfo?.userId,
+          auditInfo?.userName,
+          auditInfo?.userRole,
+          auditInfo?.reason || 'Service created',
+          auditInfo?.ipAddress,
+          auditInfo?.userAgent
+        );
+        
+        return createdService;
+      } catch (error) {
+        console.error('Service creation failed:', error);
+        throw new Error(`Failed to create service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    });
+  }
+
+  async updateService(
+    id: string, 
+    updates: Partial<Service>,
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<Service> {
+    if (!db) throw new Error("Database not available");
+    
+    return await db.transaction(async (tx) => {
+      try {
+        // Get current service data for audit log
+        const currentService = await tx.select().from(services)
+          .where(and(eq(services.id, id), eq(services.isDeleted, false)))
+          .limit(1);
+        
+        if (!currentService[0]) {
+          throw new Error("Service not found or has been deleted");
+        }
+
+        // Add audit fields to updates
+        const updatesWithAudit = {
+          ...updates,
+          updatedBy: auditInfo?.userId || null,
+          updatedAt: new Date()
+        };
+
+        const result = await tx.update(services)
+          .set(updatesWithAudit)
+          .where(eq(services.id, id))
+          .returning();
+        
+        const updatedService = result[0];
+        
+        // Create audit log entry
+        await this.createAuditLog(
+          id,
+          'update',
+          currentService[0],
+          updatedService,
+          auditInfo?.userId,
+          auditInfo?.userName,
+          auditInfo?.userRole,
+          auditInfo?.reason || 'Service updated',
+          auditInfo?.ipAddress,
+          auditInfo?.userAgent
+        );
+        
+        return updatedService;
+      } catch (error) {
+        console.error('Service update failed:', error);
+        throw new Error(`Failed to update service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    });
+  }
+
+  async deleteService(
+    id: string,
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<boolean> {
+    if (!db) throw new Error("Database not available");
+    
+    return await db.transaction(async (tx) => {
+      try {
+        // Get current service data for audit log
+        const currentService = await tx.select().from(services)
+          .where(and(eq(services.id, id), eq(services.isDeleted, false)))
+          .limit(1);
+        
+        if (!currentService[0]) {
+          throw new Error("Service not found or already deleted");
+        }
+
+        // Soft delete - set isDeleted to true instead of actual deletion
+        const result = await tx.update(services)
+          .set({ 
+            isDeleted: true, 
+            updatedBy: auditInfo?.userId || null,
+            updatedAt: new Date()
+          })
+          .where(eq(services.id, id))
+          .returning();
+        
+        // Create audit log entry
+        await this.createAuditLog(
+          id,
+          'delete',
+          currentService[0],
+          result[0],
+          auditInfo?.userId,
+          auditInfo?.userName,
+          auditInfo?.userRole,
+          auditInfo?.reason || 'Service deleted (soft delete)',
+          auditInfo?.ipAddress,
+          auditInfo?.userAgent
+        );
+        
+        return result.length > 0;
+      } catch (error) {
+        console.error('Service deletion failed:', error);
+        throw new Error(`Failed to delete service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    });
+  }
+
+  async restoreService(
+    id: string,
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<Service> {
+    if (!db) throw new Error("Database not available");
+    
+    return await db.transaction(async (tx) => {
+      try {
+        // Get current service data for audit log
+        const currentService = await tx.select().from(services)
+          .where(and(eq(services.id, id), eq(services.isDeleted, true)))
+          .limit(1);
+        
+        if (!currentService[0]) {
+          throw new Error("Service not found or not deleted");
+        }
+
+        // Restore service - set isDeleted to false
+        const result = await tx.update(services)
+          .set({ 
+            isDeleted: false,
+            updatedBy: auditInfo?.userId || null,
+            updatedAt: new Date()
+          })
+          .where(eq(services.id, id))
+          .returning();
+        
+        const restoredService = result[0];
+        
+        // Create audit log entry
+        await this.createAuditLog(
+          id,
+          'restore',
+          currentService[0],
+          restoredService,
+          auditInfo?.userId,
+          auditInfo?.userName,
+          auditInfo?.userRole,
+          auditInfo?.reason || 'Service restored',
+          auditInfo?.ipAddress,
+          auditInfo?.userAgent
+        );
+        
+        return restoredService;
+      } catch (error) {
+        console.error('Service restoration failed:', error);
+        throw new Error(`Failed to restore service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    });
   }
 
   // Service Subcategories Management

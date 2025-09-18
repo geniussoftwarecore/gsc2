@@ -9,37 +9,63 @@ let db: any = null;
 
 // Async function to initialize database connection
 export async function initializeDatabase() {
-  // Only attempt database connection if DATABASE_URL is explicitly provided
-  // This ensures clean fallback to in-memory storage in Replit environment
-  if (process.env.DATABASE_URL) {
+  // Check if we're in production environment
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  if (!process.env.DATABASE_URL) {
+    if (isProduction) {
+      // In production, database connection is mandatory - no fallback allowed
+      throw new Error("CRITICAL ERROR: DATABASE_URL is required in production. No fallback to in-memory storage allowed to prevent data loss.");
+    } else {
+      console.log("DATABASE_URL not found, using in-memory storage (development only)");
+      return;
+    }
+  }
+
+  try {
+    console.log("DATABASE_URL found, attempting PostgreSQL connection...");
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      // Add connection pool settings for better reliability
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+    
+    const tempDb = drizzle({ client: pool, schema: { ...schema, ...crmSchema } });
+    
+    // Test if tables exist by attempting a simple query
     try {
-      console.log("DATABASE_URL found, attempting PostgreSQL connection...");
-      pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-      });
-      const tempDb = drizzle({ client: pool, schema: { ...schema, ...crmSchema } });
+      await tempDb.select().from(schema.users).limit(1);
+      db = tempDb;
+      console.log("PostgreSQL database connection established and tables verified");
+    } catch (tableError: any) {
+      console.error("Database tables not found or not accessible:", tableError.message);
       
-      // Test if tables exist by attempting a simple query
-      try {
-        await tempDb.select().from(schema.users).limit(1);
-        db = tempDb;
-        console.log("PostgreSQL database connection established and tables verified");
-      } catch (tableError: any) {
-        console.log("Database tables not found or not accessible:", tableError.message);
-        console.log("Falling back to in-memory storage");
+      if (isProduction) {
+        // In production, table access failure is critical - no fallback
+        if (pool) {
+          await pool.end();
+        }
+        throw new Error(`CRITICAL ERROR: Database tables not accessible in production. Error: ${tableError.message}. No fallback allowed to prevent data loss.`);
+      } else {
+        console.log("Falling back to in-memory storage (development only)");
         if (pool) {
           await pool.end();
         }
         pool = null;
         db = null;
       }
-    } catch (error) {
-      console.log("Failed to connect to PostgreSQL, falling back to in-memory storage:", error);
+    }
+  } catch (error) {
+    if (isProduction) {
+      // In production, any database connection failure is critical
+      throw new Error(`CRITICAL ERROR: Failed to connect to PostgreSQL in production. Error: ${error}. No fallback allowed to prevent data loss.`);
+    } else {
+      console.log("Failed to connect to PostgreSQL, falling back to in-memory storage (development only):", error);
       pool = null;
       db = null;
     }
-  } else {
-    console.log("DATABASE_URL not found, using in-memory storage");
   }
 }
 

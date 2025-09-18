@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, index, unique, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, index, unique, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -81,7 +81,30 @@ export const services = pgTable("services", {
   technologies: jsonb("technologies").$type<string[]>(),
   deliveryTime: text("delivery_time"),
   startingPrice: text("starting_price"),
-});
+  // Data protection fields
+  isDeleted: boolean("is_deleted").notNull().default(false), // Soft delete protection
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdBy: varchar("created_by"), // Track who created the service
+  updatedBy: varchar("updated_by"), // Track who last updated the service
+}, (table) => ({
+  // Unique constraints to prevent duplication - only for active (non-deleted) services
+  titleUniqueActive: uniqueIndex("services_title_unique_active").on(table.title).where(sql`${table.isDeleted} = false`),
+  iconCategoryUniqueActive: uniqueIndex("services_icon_category_unique_active").on(table.icon, table.category).where(sql`${table.isDeleted} = false`),
+  
+  // Indexes for performance
+  categoryIdx: index("services_category_idx").on(table.category),
+  featuredIdx: index("services_featured_idx").on(table.featured),
+  isDeletedIdx: index("services_is_deleted_idx").on(table.isDeleted),
+  createdAtIdx: index("services_created_at_idx").on(table.createdAt),
+  updatedAtIdx: index("services_updated_at_idx").on(table.updatedAt),
+  createdByIdx: index("services_created_by_idx").on(table.createdBy),
+  
+  // Composite indexes for common queries
+  categoryFeaturedIdx: index("services_category_featured_idx").on(table.category, table.featured),
+  activeCategoryIdx: index("services_active_category_idx").on(table.isDeleted, table.category),
+  deletedCreatedIdx: index("services_deleted_created_idx").on(table.isDeleted, table.createdAt),
+}));
 
 export const serviceSubcategories = pgTable("service_subcategories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -459,6 +482,35 @@ export const savedFilters = pgTable("saved_filters", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Audit Log for Services Operations
+export const serviceAuditLog = pgTable("service_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceId: varchar("service_id").references(() => services.id),
+  operation: text("operation").notNull(), // 'create', 'update', 'delete', 'restore'
+  tableName: text("table_name").notNull().default("services"),
+  oldValues: jsonb("old_values").$type<Record<string, any>>(), // Previous state before change
+  newValues: jsonb("new_values").$type<Record<string, any>>(), // New state after change
+  changedFields: jsonb("changed_fields").$type<string[]>(), // List of changed field names
+  userId: varchar("user_id").references(() => users.id), // Who performed the operation
+  userName: text("user_name"), // User name for easy reference
+  userRole: text("user_role"), // User role at time of operation
+  ipAddress: text("ip_address"), // Client IP address
+  userAgent: text("user_agent"), // Browser/client info
+  reason: text("reason"), // Optional reason for the change
+  riskLevel: text("risk_level").default("low"), // 'low', 'medium', 'high', 'critical'
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  serviceIdIdx: index("service_audit_service_id_idx").on(table.serviceId),
+  operationIdx: index("service_audit_operation_idx").on(table.operation),
+  userIdIdx: index("service_audit_user_id_idx").on(table.userId),
+  createdAtIdx: index("service_audit_created_at_idx").on(table.createdAt),
+  riskLevelIdx: index("service_audit_risk_level_idx").on(table.riskLevel),
+  
+  // Composite indexes for common audit queries
+  serviceOperationIdx: index("service_audit_service_operation_idx").on(table.serviceId, table.operation),
+  userDateIdx: index("service_audit_user_date_idx").on(table.userId, table.createdAt),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -579,6 +631,16 @@ export const insertSavedFilterSchema = createInsertSchema(savedFilters).omit({
   createdAt: true,
   updatedAt: true,
 });
+
+// Service Audit Log Schema
+export const insertServiceAuditLogSchema = createInsertSchema(serviceAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Export types for audit log
+export type ServiceAuditLog = typeof serviceAuditLog.$inferSelect;
+export type InsertServiceAuditLog = z.infer<typeof insertServiceAuditLogSchema>;
 
 export const insertClientRequestSchema = createInsertSchema(clientRequests).omit({
   id: true,

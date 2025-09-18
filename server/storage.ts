@@ -36,6 +36,8 @@ import {
   type InsertDealStage,
   type TicketStatus,
   type InsertTicketStatus,
+  type ServiceAuditLog,
+  type InsertServiceAuditLog,
   supportTickets,
   dealStages,
   ticketStatus
@@ -61,10 +63,26 @@ export interface IStorage {
   getPortfolioItemsByCategory(category: string): Promise<PortfolioItem[]>;
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
   
-  // Services Management
+  // Services Management with Audit Support
   getAllServices(): Promise<Service[]>;
   getServiceById(id: string): Promise<Service | undefined>;
-  createService(service: InsertService): Promise<Service>;
+  createService(
+    service: InsertService, 
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<Service>;
+  updateService(
+    id: string, 
+    updates: Partial<Service>,
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<Service>;
+  deleteService(
+    id: string,
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<boolean>;
+  restoreService(
+    id: string,
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<Service>;
   
   // Service Subcategories Management
   getAllServiceSubcategories(): Promise<ServiceSubcategory[]>;
@@ -1141,7 +1159,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(user => user.username === username);
   }
 
-  async createService(service: InsertService): Promise<Service> {
+  async createService(
+    service: InsertService, 
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<Service> {
     const id = randomUUID();
     const newService: Service = { 
       ...service, 
@@ -1149,10 +1170,74 @@ export class MemStorage implements IStorage {
       featured: service.featured || null,
       technologies: service.technologies || null,
       deliveryTime: service.deliveryTime || null,
-      startingPrice: service.startingPrice || null
+      startingPrice: service.startingPrice || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: auditInfo?.userId || null,
+      updatedBy: auditInfo?.userId || null,
+      isDeleted: false
     };
     this.services.set(id, newService);
     return newService;
+  }
+
+  async updateService(
+    id: string, 
+    updates: Partial<Service>,
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<Service> {
+    const existingService = this.services.get(id);
+    if (!existingService || existingService.isDeleted) {
+      throw new Error("Service not found or has been deleted");
+    }
+
+    const updatedService: Service = {
+      ...existingService,
+      ...updates,
+      updatedAt: new Date(),
+      updatedBy: auditInfo?.userId || null
+    };
+    this.services.set(id, updatedService);
+    return updatedService;
+  }
+
+  async deleteService(
+    id: string,
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<boolean> {
+    const service = this.services.get(id);
+    if (!service || service.isDeleted) {
+      return false;
+    }
+
+    // Soft delete - set isDeleted to true
+    const deletedService: Service = {
+      ...service,
+      isDeleted: true,
+      updatedAt: new Date(),
+      updatedBy: auditInfo?.userId || null
+    };
+    this.services.set(id, deletedService);
+    return true;
+  }
+
+  async restoreService(
+    id: string,
+    auditInfo?: { userId?: string; userName?: string; userRole?: string; ipAddress?: string; userAgent?: string; reason?: string }
+  ): Promise<Service> {
+    const service = this.services.get(id);
+    if (!service || !service.isDeleted) {
+      throw new Error("Service not found or not deleted");
+    }
+
+    const restoredService: Service = {
+      ...service,
+      isDeleted: false,
+      updatedAt: new Date(),
+      updatedBy: auditInfo?.userId || null
+    };
+    this.services.set(id, restoredService);
+    return restoredService;
   }
 
   // Service Subcategories Management

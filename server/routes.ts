@@ -15,6 +15,7 @@ import enterpriseTableRoutes from "./routes/enterpriseTableRoutes";
 import { 
   insertContactSubmissionSchema, 
   insertServiceRequestSchema,
+  insertServiceSchema,
   insertLeadSchema,
   insertContactSchema,
   insertAccountSchema,
@@ -27,6 +28,114 @@ import {
 import { z } from "zod";
 import { createObjectCsvWriter } from 'csv-writer';
 import { generateToken } from "./auth";
+
+// Error codes enum for consistent error handling
+enum ServiceErrorCodes {
+  SERVICE_NOT_FOUND = 'SERVICE_NOT_FOUND',
+  SERVICE_DUPLICATE = 'SERVICE_DUPLICATE',
+  SERVICE_DELETED = 'SERVICE_DELETED',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  FORBIDDEN = 'FORBIDDEN',
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
+  DATABASE_ERROR = 'DATABASE_ERROR'
+}
+
+// Helper function for structured error responses
+function createErrorResponse(
+  success: boolean = false,
+  message: string,
+  code: ServiceErrorCodes,
+  details?: any,
+  errors?: any[]
+) {
+  return {
+    success,
+    message,
+    code,
+    details,
+    errors,
+    timestamp: new Date().toISOString()
+  };
+}
+
+// Helper function to map database errors to structured responses
+function mapDatabaseError(error: any): { status: number; response: any } {
+  // Generate a unique error ID for server-side tracking
+  const errorId = `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Log the full error details server-side for debugging
+  console.error(`Database error [${errorId}]:`, {
+    message: error.message,
+    code: error.code,
+    constraint: error.constraint,
+    detail: error.detail,
+    stack: error.stack
+  });
+  
+  // PostgreSQL specific error code mapping
+  if (error.code === '23505') { // unique_violation
+    return {
+      status: 409,
+      response: createErrorResponse(
+        false,
+        "A service with this title and category already exists",
+        ServiceErrorCodes.SERVICE_DUPLICATE,
+        errorId
+      )
+    };
+  }
+  
+  if (error.code === '23503') { // foreign_key_violation
+    return {
+      status: 400,
+      response: createErrorResponse(
+        false,
+        "Invalid reference to related data",
+        ServiceErrorCodes.VALIDATION_ERROR,
+        errorId
+      )
+    };
+  }
+  
+  if (error.code === '23502') { // not_null_violation
+    return {
+      status: 400,
+      response: createErrorResponse(
+        false,
+        "Required field is missing",
+        ServiceErrorCodes.VALIDATION_ERROR,
+        errorId
+      )
+    };
+  }
+  
+  // Application-level error handling
+  const message = error.message?.toLowerCase() || '';
+  
+  if (message.includes('not found') || message.includes('deleted')) {
+    return {
+      status: 404,
+      response: createErrorResponse(
+        false,
+        "Service not found or has been deleted",
+        ServiceErrorCodes.SERVICE_NOT_FOUND,
+        errorId
+      )
+    };
+  }
+  
+  // Default to internal server error for unknown cases
+  return {
+    status: 500,
+    response: createErrorResponse(
+      false,
+      "Database operation failed",
+      ServiceErrorCodes.DATABASE_ERROR,
+      errorId
+    )
+  };
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log('=== REGISTERING ALL ROUTES ===');
@@ -298,20 +407,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!service) {
         console.log('Service not found with ID:', id);
-        return res.status(404).json({ 
-          success: false, 
-          message: "Service not found" 
-        });
+        return res.status(404).json(createErrorResponse(
+          false,
+          "Service not found",
+          ServiceErrorCodes.SERVICE_NOT_FOUND,
+          `Service with ID ${id} not found`
+        ));
       }
       
       console.log('Found service:', service.title);
       res.json(service);
     } catch (error) {
       console.error('Service fetch error:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to fetch service" 
-      });
+      res.status(500).json(createErrorResponse(
+        false,
+        "Failed to fetch service",
+        ServiceErrorCodes.INTERNAL_ERROR,
+        'Service retrieval failed'
+      ));
     }
   });
   
@@ -319,12 +432,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/services", async (req, res) => {
     try {
       const services = await storage.instance.getAllServices();
-      res.json(services);
-    } catch (error) {
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to fetch services" 
+      res.json({
+        success: true,
+        data: services,
+        total: services.length
       });
+    } catch (error) {
+      console.error('Get all services error:', error);
+      res.status(500).json(createErrorResponse(
+        false,
+        "Failed to fetch services",
+        ServiceErrorCodes.INTERNAL_ERROR,
+        'Services retrieval failed'
+      ));
+    }
+  });
+
+  // Create new service - Requires authentication and admin/manager role
+  app.post("/api/services", requireAuth, requireRole(['admin', 'manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      // Validate request body
+      const validatedData = insertServiceSchema.parse(req.body);
+      
+      // Prepare audit information
+      const auditInfo = {
+        userId: req.user?.id,
+        userName: req.user?.username,
+        userRole: req.user?.role,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        reason: req.body.reason || 'Service created via API'
+      };
+
+      // Create service with audit logging
+      const service = await storage.instance.createService(validatedData, auditInfo);
+      
+      res.status(201).json({
+        success: true,
+        data: service,
+        message: "Service created successfully"
+      });
+    } catch (error) {
+      console.error('Create service error:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(createErrorResponse(
+          false,
+          "Validation error",
+          ServiceErrorCodes.VALIDATION_ERROR,
+          error.issues,
+          error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+            code: err.code
+          }))
+        ));
+      }
+      
+      if (error instanceof Error) {
+        const mappedError = mapDatabaseError(error);
+        return res.status(mappedError.status).json(mappedError.response);
+      }
+      
+      res.status(500).json(createErrorResponse(
+        false,
+        "Failed to create service",
+        ServiceErrorCodes.INTERNAL_ERROR,
+        error instanceof Error ? error.message : 'Unknown error'
+      ));
+    }
+  });
+
+  // Update service - Requires authentication and admin/manager role
+  app.put("/api/services/:id", requireAuth, requireRole(['admin', 'manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Validate request body (partial update)
+      const validatedData = insertServiceSchema.partial().parse(req.body);
+      
+      // Prepare audit information
+      const auditInfo = {
+        userId: req.user?.id,
+        userName: req.user?.username,
+        userRole: req.user?.role,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        reason: req.body.reason || 'Service updated via API'
+      };
+
+      // Update service with audit logging
+      const service = await storage.instance.updateService(id, validatedData, auditInfo);
+      
+      res.json({
+        success: true,
+        data: service,
+        message: "Service updated successfully"
+      });
+    } catch (error) {
+      console.error('Update service error:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(createErrorResponse(
+          false,
+          "Validation error",
+          ServiceErrorCodes.VALIDATION_ERROR,
+          error.issues,
+          error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+            code: err.code
+          }))
+        ));
+      }
+      
+      if (error instanceof Error) {
+        const mappedError = mapDatabaseError(error);
+        return res.status(mappedError.status).json(mappedError.response);
+      }
+      
+      res.status(500).json(createErrorResponse(
+        false,
+        "Failed to update service",
+        ServiceErrorCodes.INTERNAL_ERROR,
+        error instanceof Error ? error.message : 'Unknown error'
+      ));
+    }
+  });
+
+  // Delete service (soft delete) - Requires authentication and admin/manager role
+  app.delete("/api/services/:id", requireAuth, requireRole(['admin', 'manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Prepare audit information
+      const auditInfo = {
+        userId: req.user?.id,
+        userName: req.user?.username,
+        userRole: req.user?.role,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        reason: req.body.reason || 'Service deleted via API'
+      };
+
+      // Delete service with audit logging
+      const success = await storage.instance.deleteService(id, auditInfo);
+      
+      if (!success) {
+        return res.status(404).json(createErrorResponse(
+          false,
+          "Service not found or already deleted",
+          ServiceErrorCodes.SERVICE_NOT_FOUND,
+          'Service deletion failed - service not found or already deleted'
+        ));
+      }
+      
+      res.json({
+        success: true,
+        message: "Service deleted successfully"
+      });
+    } catch (error) {
+      console.error('Delete service error:', error);
+      
+      if (error instanceof Error) {
+        const mappedError = mapDatabaseError(error);
+        return res.status(mappedError.status).json(mappedError.response);
+      }
+      
+      res.status(500).json(createErrorResponse(
+        false,
+        "Failed to delete service",
+        ServiceErrorCodes.INTERNAL_ERROR,
+        error instanceof Error ? error.message : 'Unknown error'
+      ));
+    }
+  });
+
+  // Restore service - Requires authentication and admin/manager role
+  app.post("/api/services/:id/restore", requireAuth, requireRole(['admin', 'manager']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Prepare audit information
+      const auditInfo = {
+        userId: req.user?.id,
+        userName: req.user?.username,
+        userRole: req.user?.role,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        reason: req.body.reason || 'Service restored via API'
+      };
+
+      // Restore service with audit logging
+      const service = await storage.instance.restoreService(id, auditInfo);
+      
+      res.json({
+        success: true,
+        data: service,
+        message: "Service restored successfully"
+      });
+    } catch (error) {
+      console.error('Restore service error:', error);
+      
+      if (error instanceof Error) {
+        const mappedError = mapDatabaseError(error);
+        return res.status(mappedError.status).json(mappedError.response);
+      }
+      
+      res.status(500).json(createErrorResponse(
+        false,
+        "Failed to restore service",
+        ServiceErrorCodes.INTERNAL_ERROR,
+        error instanceof Error ? error.message : 'Unknown error'
+      ));
     }
   });
 
