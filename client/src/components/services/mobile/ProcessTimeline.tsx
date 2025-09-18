@@ -5,7 +5,7 @@ import { useLanguage } from "@/i18n/lang";
 
 interface ProcessTimelineProps {
   title: string;
-  steps: string[];
+  steps: (string | { phase: string; note: string })[];
 }
 
 export function ProcessTimeline({ title, steps }: ProcessTimelineProps) {
@@ -52,9 +52,16 @@ export function ProcessTimeline({ title, steps }: ProcessTimelineProps) {
                       {index + 1}
                     </motion.div>
                     <div className="flex-1 pt-2">
-                      <p className="text-gray-700 leading-relaxed text-lg group-hover:text-gray-900 transition-colors duration-300">
-                        {step}
-                      </p>
+                      {typeof step === 'string' ? (
+                        <p className="text-gray-700 leading-relaxed text-lg group-hover:text-gray-900 transition-colors duration-300">
+                          {step}
+                        </p>
+                      ) : (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-1">{step.phase}</h4>
+                          <p className="text-sm text-gray-600">{step.note}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
