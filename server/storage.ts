@@ -7,6 +7,8 @@ import {
   type InsertPortfolioItem,
   type Service,
   type InsertService,
+  type ServiceSubcategory,
+  type InsertServiceSubcategory,
   type Testimonial,
   type InsertTestimonial,
   type SubscriptionPlan,
@@ -63,6 +65,13 @@ export interface IStorage {
   getAllServices(): Promise<Service[]>;
   getServiceById(id: string): Promise<Service | undefined>;
   createService(service: InsertService): Promise<Service>;
+  
+  // Service Subcategories Management
+  getAllServiceSubcategories(): Promise<ServiceSubcategory[]>;
+  getServiceSubcategoriesByService(serviceId: string): Promise<ServiceSubcategory[]>;
+  getServiceSubcategoriesByCategory(category: string): Promise<ServiceSubcategory[]>;
+  getServiceSubcategoryById(id: string): Promise<ServiceSubcategory | undefined>;
+  createServiceSubcategory(subcategory: InsertServiceSubcategory): Promise<ServiceSubcategory>;
   
   // Portfolio Management  
   getAllPortfolioItems(): Promise<PortfolioItem[]>;
@@ -225,6 +234,7 @@ export class MemStorage implements IStorage {
   private contactSubmissions: Map<string, ContactSubmission>;
   private portfolioItems: Map<string, PortfolioItem>;
   private services: Map<string, Service>;
+  private serviceSubcategories: Map<string, ServiceSubcategory>;
   private testimonials: Map<string, Testimonial>;
   private subscriptionPlans: Map<string, SubscriptionPlan>;
   private userSubscriptions: Map<string, UserSubscription>;
@@ -245,6 +255,7 @@ export class MemStorage implements IStorage {
     this.contactSubmissions = new Map();
     this.portfolioItems = new Map();
     this.services = new Map();
+    this.serviceSubcategories = new Map();
     this.testimonials = new Map();
     this.subscriptionPlans = new Map();
     this.userSubscriptions = new Map();
@@ -1142,6 +1153,35 @@ export class MemStorage implements IStorage {
     };
     this.services.set(id, newService);
     return newService;
+  }
+
+  // Service Subcategories Management
+  async getAllServiceSubcategories(): Promise<ServiceSubcategory[]> {
+    return Array.from(this.serviceSubcategories.values());
+  }
+
+  async getServiceSubcategoriesByService(serviceId: string): Promise<ServiceSubcategory[]> {
+    return Array.from(this.serviceSubcategories.values()).filter(sub => sub.serviceId === serviceId);
+  }
+
+  async getServiceSubcategoriesByCategory(category: string): Promise<ServiceSubcategory[]> {
+    return Array.from(this.serviceSubcategories.values()).filter(sub => sub.category === category);
+  }
+
+  async getServiceSubcategoryById(id: string): Promise<ServiceSubcategory | undefined> {
+    return this.serviceSubcategories.get(id);
+  }
+
+  async createServiceSubcategory(subcategory: InsertServiceSubcategory): Promise<ServiceSubcategory> {
+    const id = randomUUID();
+    const newSubcategory: ServiceSubcategory = {
+      ...subcategory,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.serviceSubcategories.set(id, newSubcategory);
+    return newSubcategory;
   }
 
   async getAllTestimonials(): Promise<Testimonial[]> {

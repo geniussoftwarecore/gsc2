@@ -7,8 +7,10 @@ import {
   leads,
   contacts,
   accounts,
-  opportunities
+  opportunities,
+  serviceSubcategories
 } from "@shared/schema";
+import { serviceSubcategoriesData } from "./service-subcategories-data";
 import bcrypt from "bcrypt";
 
 export async function seedDatabase() {
@@ -23,8 +25,19 @@ export async function seedDatabase() {
     // Test database connection first
     try {
       const existingUsers = await db.select().from(users).limit(1);
+      const existingSubcategories = await db.select().from(serviceSubcategories).limit(1);
+      
       if (existingUsers.length > 0) {
-        console.log("Database already seeded, skipping...");
+        console.log("Database already seeded with users...");
+        
+        // Check if service subcategories exist, if not seed them
+        if (existingSubcategories.length === 0) {
+          console.log("Service subcategories not found, seeding them...");
+          await seedServiceSubcategories();
+        } else {
+          console.log("Service subcategories already exist, skipping...");
+        }
+        
         return;
       }
     } catch (testError: any) {
@@ -62,7 +75,7 @@ export async function seedDatabase() {
     });
 
     // Seed services
-    await db.insert(services).values([
+    const seededServices = await db.insert(services).values([
       {
         title: "تطوير تطبيقات الهواتف الذكية",
         description: "نطور تطبيقات احترافية وسريعة الاستجابة لأنظمة iOS و Android بأحدث التقنيات والمعايير العالمية مع واجهات مستخدم حديثة وتجربة استخدام مميزة",
@@ -135,7 +148,34 @@ export async function seedDatabase() {
         technologies: ["ERPNext", "Python", "Frappe Framework", "MariaDB", "Redis"],
         deliveryTime: "8-16 أسبوع"
       }
-    ]);
+    ]).returning();
+
+    // Seed service subcategories
+    console.log("Seeding service subcategories...");
+    
+    // Create a map of service categories to their IDs for reference
+    const serviceMap = new Map<string, string>();
+    seededServices.forEach((service: any) => {
+      serviceMap.set(service.category, service.id);
+    });
+
+    // Prepare subcategory data with proper service IDs
+    const subcategoriesToSeed = [];
+    for (const subcategoryData of serviceSubcategoriesData) {
+      const serviceId = serviceMap.get(subcategoryData.category);
+      if (serviceId) {
+        subcategoriesToSeed.push({
+          ...subcategoryData,
+          serviceId: serviceId
+        });
+      }
+    }
+
+    // Insert service subcategories
+    if (subcategoriesToSeed.length > 0) {
+      await db.insert(serviceSubcategories).values(subcategoriesToSeed);
+      console.log(`Seeded ${subcategoriesToSeed.length} service subcategories`);
+    }
 
     // Seed testimonials
     await db.insert(testimonials).values([
@@ -261,6 +301,50 @@ export async function seedDatabase() {
     console.log("Database seeded successfully!");
   } catch (error) {
     console.error("Error seeding database:", error);
+    throw error;
+  }
+}
+
+// Separate function to seed service subcategories
+async function seedServiceSubcategories() {
+  try {
+    console.log("Starting service subcategories seeding...");
+    
+    // Get existing services from database
+    const existingServices = await db.select().from(services);
+    
+    if (existingServices.length === 0) {
+      console.log("No services found in database, cannot seed subcategories");
+      return;
+    }
+    
+    // Create a map of service categories to their IDs for reference
+    const serviceMap = new Map<string, string>();
+    existingServices.forEach((service: any) => {
+      serviceMap.set(service.category, service.id);
+    });
+
+    // Prepare subcategory data with proper service IDs
+    const subcategoriesToSeed = [];
+    for (const subcategoryData of serviceSubcategoriesData) {
+      const serviceId = serviceMap.get(subcategoryData.category);
+      if (serviceId) {
+        subcategoriesToSeed.push({
+          ...subcategoryData,
+          serviceId: serviceId
+        });
+      }
+    }
+
+    // Insert service subcategories
+    if (subcategoriesToSeed.length > 0) {
+      await db.insert(serviceSubcategories).values(subcategoriesToSeed);
+      console.log(`✅ Successfully seeded ${subcategoriesToSeed.length} service subcategories`);
+    } else {
+      console.log("No matching services found for subcategories");
+    }
+  } catch (error) {
+    console.error("Error seeding service subcategories:", error);
     throw error;
   }
 }

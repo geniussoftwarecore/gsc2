@@ -7,6 +7,8 @@ import {
   type InsertPortfolioItem,
   type Service,
   type InsertService,
+  type ServiceSubcategory,
+  type InsertServiceSubcategory,
   type Testimonial,
   type InsertTestimonial,
   type SubscriptionPlan,
@@ -38,6 +40,7 @@ import {
   contactSubmissions,
   portfolioItems,
   services,
+  serviceSubcategories,
   testimonials,
   subscriptionPlans,
   userSubscriptions,
@@ -150,6 +153,34 @@ export class DatabaseStorage implements IStorage {
   async createService(service: InsertService): Promise<Service> {
     if (!db) throw new Error("Database not available");
     const result = await db.insert(services).values(service).returning();
+    return result[0];
+  }
+
+  // Service Subcategories Management
+  async getAllServiceSubcategories(): Promise<ServiceSubcategory[]> {
+    if (!db) throw new Error("Database not available");
+    return await db.select().from(serviceSubcategories);
+  }
+
+  async getServiceSubcategoriesByService(serviceId: string): Promise<ServiceSubcategory[]> {
+    if (!db) throw new Error("Database not available");
+    return await db.select().from(serviceSubcategories).where(eq(serviceSubcategories.serviceId, serviceId));
+  }
+
+  async getServiceSubcategoriesByCategory(category: string): Promise<ServiceSubcategory[]> {
+    if (!db) throw new Error("Database not available");
+    return await db.select().from(serviceSubcategories).where(eq(serviceSubcategories.category, category));
+  }
+
+  async getServiceSubcategoryById(id: string): Promise<ServiceSubcategory | undefined> {
+    if (!db) throw new Error("Database not available");
+    const result = await db.select().from(serviceSubcategories).where(eq(serviceSubcategories.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createServiceSubcategory(subcategory: InsertServiceSubcategory): Promise<ServiceSubcategory> {
+    if (!db) throw new Error("Database not available");
+    const result = await db.insert(serviceSubcategories).values(subcategory).returning();
     return result[0];
   }
 

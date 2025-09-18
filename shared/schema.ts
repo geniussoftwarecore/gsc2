@@ -83,6 +83,37 @@ export const services = pgTable("services", {
   startingPrice: text("starting_price"),
 });
 
+export const serviceSubcategories = pgTable("service_subcategories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceId: varchar("service_id").references(() => services.id),
+  subcategoryId: text("subcategory_id").notNull(), // unique identifier like 'ecommerce', 'website-corporate'
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  shortDesc: text("short_desc"),
+  keyFeatures: jsonb("key_features").$type<string[]>(),
+  technicalFeatures: jsonb("technical_features").$type<string[]>(),
+  benefits: jsonb("benefits").$type<string[]>(),
+  technologies: jsonb("technologies").$type<string[]>(),
+  integrations: jsonb("integrations").$type<string[]>(),
+  timeline: jsonb("timeline").$type<Array<{phase: string, note: string}>>(),
+  deliverables: jsonb("deliverables").$type<string[]>(),
+  targetAudience: jsonb("target_audience").$type<string[]>(),
+  pricingNote: text("pricing_note"),
+  estimatedCost: text("estimated_cost"),
+  faqs: jsonb("faqs").$type<Array<{q: string, a: string}>>(),
+  tag: text("tag"), // "Enterprise", "MVP", "Standard", etc.
+  category: text("category").notNull(), // 'mobile', 'web', 'desktop', 'design', 'marketing'
+  featured: text("featured").default("false"),
+  active: text("active").default("true"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  serviceIdIdx: index("service_subcategories_service_id_idx").on(table.serviceId),
+  categoryIdx: index("service_subcategories_category_idx").on(table.category),
+  activeIdx: index("service_subcategories_active_idx").on(table.active),
+  subcategoryIdUnique: unique("service_subcategories_subcategory_id_unique").on(table.subcategoryId),
+}));
+
 export const testimonials = pgTable("testimonials", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -450,6 +481,12 @@ export const insertServiceSchema = createInsertSchema(services).omit({
   id: true,
 });
 
+export const insertServiceSubcategorySchema = createInsertSchema(serviceSubcategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
   id: true,
 });
@@ -595,6 +632,9 @@ export type PortfolioItem = typeof portfolioItems.$inferSelect;
 
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Service = typeof services.$inferSelect;
+
+export type InsertServiceSubcategory = z.infer<typeof insertServiceSubcategorySchema>;
+export type ServiceSubcategory = typeof serviceSubcategories.$inferSelect;
 
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type Testimonial = typeof testimonials.$inferSelect;

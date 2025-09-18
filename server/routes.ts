@@ -328,6 +328,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Service Subcategories API Routes
+  
+  // Get all service subcategories
+  app.get("/api/service-subcategories", async (req, res) => {
+    try {
+      const subcategories = await storage.instance.getAllServiceSubcategories();
+      res.json(subcategories);
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to fetch service subcategories" 
+      });
+    }
+  });
+
+  // Get service subcategories by service ID
+  app.get("/api/service-subcategories/by-service/:serviceId", async (req, res) => {
+    try {
+      const { serviceId } = req.params;
+      const subcategories = await storage.instance.getServiceSubcategoriesByService(serviceId);
+      res.json(subcategories);
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to fetch service subcategories" 
+      });
+    }
+  });
+
+  // Get service subcategories by category
+  app.get("/api/service-subcategories/by-category/:category", async (req, res) => {
+    try {
+      const { category } = req.params;
+      const subcategories = await storage.instance.getServiceSubcategoriesByCategory(category);
+      res.json(subcategories);
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to fetch service subcategories" 
+      });
+    }
+  });
+
+  // Get single service subcategory by ID
+  app.get("/api/service-subcategories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const subcategory = await storage.instance.getServiceSubcategoryById(id);
+      
+      if (!subcategory) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Service subcategory not found" 
+        });
+      }
+      
+      res.json(subcategory);
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to fetch service subcategory" 
+      });
+    }
+  });
+
   // Get all subscription plans
   app.get("/api/subscription-plans", async (req, res) => {
     try {
