@@ -1,6 +1,6 @@
 # GSC (Genius Software Core) Platform
 
-A comprehensive software development and CRM system built with modern web technologies.
+A comprehensive software development and CRM system with enterprise-grade mobile app service wizard, built with modern web technologies and full Arabic/RTL support.
 
 ## Stack & Design Profile (Auto-detected)
 
@@ -20,6 +20,67 @@ A comprehensive software development and CRM system built with modern web techno
 - Styling: Design tokens system (`shared/ui/tokens.ts`)
 
 **⚠️ Production Warning:** External Google Fonts dependency should be replaced with local fonts for production.
+
+## 🚀 Mobile App Service Wizard
+
+### Enterprise-Grade 3-Step Workflow
+
+The GSC platform includes a comprehensive mobile app service wizard that meets enterprise standards:
+
+**Step 1: App Type Selection**
+- Interactive radio cards for app categories (business, ecommerce, education, healthcare, entertainment)
+- Real-time feature suggestions based on selected type
+- Fully accessible with keyboard navigation and screen reader support
+
+**Step 2: Features Selection** 
+- Dynamic feature lists tailored to selected app type
+- Multi-select checkboxes with descriptions
+- Advanced features like AI integration, IoT connectivity, blockchain support
+
+**Step 3: Contact & Requirements**
+- Complete contact form with validation
+- File upload support (images, documents, PDFs - max 10MB, 5 files)
+- Project summary review before submission
+- Real-time form validation with Arabic/English error messages
+
+### Key Features
+
+✅ **Full RTL/Arabic Support**: Complete right-to-left language support with Arabic font rendering  
+✅ **File Upload Security**: Multer-based secure file handling with MIME type validation  
+✅ **Form State Management**: React Hook Form with Zod validation and real-time error handling  
+✅ **Database Persistence**: PostgreSQL with Drizzle ORM for reliable data storage  
+✅ **API Compatibility**: Supports both JSON and multipart FormData requests  
+✅ **Enterprise Testing**: Comprehensive data-testid attributes for automated testing  
+✅ **Error Handling**: Structured error responses with cleanup on failures  
+✅ **Security Measures**: File type validation, size limits, and secure filename generation  
+
+### API Endpoints
+
+```typescript
+// Create mobile app order
+POST /api/mobile-app-orders
+Content-Type: application/json | multipart/form-data
+
+// Example JSON request:
+{
+  "customerName": "Ahmed Hassan", 
+  "customerEmail": "ahmed@example.com",
+  "customerPhone": "+966501234567",
+  "appType": "business",
+  "selectedFeatures": ["user_auth", "push_notifications", "analytics"],
+  "additionalRequirements": "We need integration with existing ERP system"
+}
+```
+
+### Database Schema
+
+The `mobile_app_orders` table includes:
+- Customer contact information
+- App type and selected features (JSON array)
+- File attachments metadata
+- Status tracking and assignment fields
+- Audit trails with created/updated timestamps
+- Proper indexing for performance at scale
 
 ## Quick Start
 
@@ -205,5 +266,61 @@ Passwords must meet these requirements:
 The login system uses `verifyPassword()` from `server/security/password.ts` and enforces the `force_password_change` flag. When this flag is set to true, users must change their password on first login.
 
 ---
+
+## 🏗️ Mobile App Wizard Architecture 
+
+### Technical Implementation
+
+**Frontend Architecture:**
+- **React Hook Form**: State management with Zod validation
+- **Step-by-step wizard**: Progressive disclosure with smooth transitions
+- **File Upload Component**: Drag & drop with progress indicators
+- **RTL Support**: Complete Arabic language integration with Cairo font
+- **Responsive Design**: Mobile-first approach with TailwindCSS + shadcn/ui
+
+**Backend Architecture:**
+- **Express.js API**: RESTful endpoints with structured error handling
+- **Multer File Processing**: Secure multipart FormData handling
+- **PostgreSQL Database**: Drizzle ORM with proper indexing and relationships
+- **Security Measures**: File type validation, size limits, secure filename generation
+
+**Key Files:**
+```
+client/src/pages/services/mobile.tsx           # Main wizard page
+client/src/components/services/mobile/wizard/  # Wizard components
+server/routes.ts                               # API endpoints
+shared/schema.ts                              # Database schemas
+uploads/mobile-app-orders/                    # File storage directory
+```
+
+### Security Features Implemented
+
+✅ **File Upload Security:**
+- MIME type validation (images, PDFs, documents only)
+- File size limits (10MB per file, max 5 files)
+- Secure filename generation with timestamps
+- Upload directory sandboxing
+- Error cleanup on failed uploads
+
+✅ **Data Validation:**
+- Zod schemas for type-safe validation
+- JSON string parsing for selectedFeatures array
+- SQL injection prevention via ORM
+- Structured error responses
+
+✅ **Enterprise Standards:**
+- Comprehensive data-testid attributes for automation
+- Both JSON and multipart FormData API support
+- Database persistence with audit trails
+- Form state synchronization bug fixes
+
+### Future Enhancements (Recommended)
+
+The architect review identified optional security hardening opportunities:
+
+1. **File Type Verification**: Magic byte validation instead of relying on MIME types
+2. **Malware Scanning**: AV integration for uploaded files  
+3. **Rate Limiting**: Per-IP request throttling and CAPTCHA integration
+4. **Scalability**: S3-compatible storage with signed URLs
 
 For detailed documentation, see the `/docs` directory.
