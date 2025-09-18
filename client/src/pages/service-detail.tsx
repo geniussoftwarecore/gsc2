@@ -28,6 +28,25 @@ interface Service {
   startingPrice?: number;
 }
 
+// Service Subcategory interface
+interface ServiceSubcategory {
+  id: string;
+  serviceId: string;
+  category: string;
+  title: string;
+  description: string;
+  features: string[];
+  pricing: string;
+  timeline: string;
+  technologies: string[];
+  targetAudience: string;
+  deliverables: string[];
+  prerequisites: string;
+  complexity: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // App Card interface
 interface AppCard {
   id: string;
@@ -788,6 +807,19 @@ export default function ServiceDetailClean() {
     },
   });
 
+  // Service subcategories query - fetch subcategories for this service
+  const { data: serviceSubcategories, isLoading: subcategoriesLoading } = useQuery<ServiceSubcategory[]>({
+    queryKey: ['/api/service-subcategories/by-service', id],
+    queryFn: async () => {
+      const response = await fetch(`/api/service-subcategories/by-service/${id}`);
+      if (!response.ok) {
+        return []; // Return empty array if no subcategories found
+      }
+      return response.json();
+    },
+    enabled: !!id && !!service
+  });
+
   // Filter cards based on selected category with performance optimization
   const filteredCards = useMemo(() => {
     if (selectedCategory === 'all') {
@@ -934,6 +966,102 @@ export default function ServiceDetailClean() {
                   </div>
                 )}
               </motion.div>
+
+              {/* Service Subcategories - Show for specific services only */}
+              {service && ['mobile', 'web', 'desktop', 'design', 'marketing'].includes(service.category) && 
+               serviceSubcategories && serviceSubcategories.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  className="mb-8"
+                >
+                  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+                    {lang === 'ar' ? 'أنواع وتخصصات الخدمة' : 'Service Types & Specializations'}
+                  </h2>
+                  
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {serviceSubcategories.map((subcategory, index) => (
+                      <motion.div
+                        key={subcategory.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                        className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-100 dark:border-slate-700"
+                        data-testid={`subcategory-${subcategory.id}`}
+                      >
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                          {subcategory.title}
+                        </h3>
+                        
+                        <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm leading-relaxed">
+                          {subcategory.description}
+                        </p>
+
+                        {/* Key Features */}
+                        {subcategory.features && subcategory.features.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                              {lang === 'ar' ? 'المميزات الرئيسية:' : 'Key Features:'}
+                            </h4>
+                            <ul className="space-y-1">
+                              {subcategory.features.slice(0, 3).map((feature, idx) => (
+                                <li key={idx} className="text-xs text-gray-600 dark:text-gray-400 flex items-start">
+                                  <CheckCircle className="w-3 h-3 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                                  {feature}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Technologies */}
+                        {subcategory.technologies && subcategory.technologies.length > 0 && (
+                          <div className="mb-4">
+                            <div className="flex flex-wrap gap-1">
+                              {subcategory.technologies.slice(0, 3).map((tech, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5">
+                                  {tech}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Timeline and Pricing */}
+                        <div className="space-y-2">
+                          {subcategory.timeline && (
+                            <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                              <Calendar className="w-3 h-3 mr-2" />
+                              {subcategory.timeline}
+                            </div>
+                          )}
+                          
+                          {subcategory.pricing && (
+                            <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                              <Target className="w-3 h-3 mr-2" />
+                              {subcategory.pricing}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* CTA Button */}
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-600">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full text-xs"
+                            onClick={() => setLocation(`/contact?service=${service.id}&subcategory=${subcategory.id}`)}
+                            data-testid={`button-request-${subcategory.id}`}
+                          >
+                            {lang === 'ar' ? 'اطلب عرض سعر' : 'Request Quote'}
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
 
               {/* Service Features/Content would go here */}
               <motion.div
