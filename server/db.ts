@@ -7,10 +7,12 @@ import * as crmSchema from "@shared/crm-schema";
 let pool: Pool | null = null;
 let db: any = null;
 
-// Async function to initialize database connection
+// تعزيز الحماية من فقدان البيانات - Enhanced Data Loss Prevention
 export async function initializeDatabase() {
-  // Check if we're in production environment
-  const isProduction = process.env.NODE_ENV === 'production';
+  // فحص متعدد المستويات لبيئة الإنتاج - Multi-level production environment check
+  const isProduction = process.env.NODE_ENV === 'production' || 
+                      process.env.REPLIT_DEPLOYMENT === 'true' ||
+                      process.env.NODE_ENV === 'staging';
   
   if (!process.env.DATABASE_URL) {
     if (isProduction) {

@@ -215,13 +215,21 @@ export interface IStorage {
   deleteSavedView(id: string, userId: string): Promise<boolean>;
 }
 
-// Initialize storage based on database availability
+// Initialize storage based on database availability - Enhanced with production safety
 function createStorage(): IStorage {
+  const isProduction = process.env.NODE_ENV === 'production' || 
+                      process.env.REPLIT_DEPLOYMENT === 'true' ||
+                      process.env.NODE_ENV === 'staging';
+
   if (db) {
     console.log("Creating PostgreSQL database storage");
     return new DatabaseStorage();
   } else {
-    console.log("Creating in-memory storage");
+    if (isProduction) {
+      // منع فقدان البيانات - Critical Production Protection
+      throw new Error("CRITICAL: Database storage required in production. In-memory storage BLOCKED to prevent data loss.");
+    }
+    console.log("Creating in-memory storage (development only)");
     return new MemStorage();
   }
 }
@@ -469,7 +477,7 @@ export class MemStorage implements IStorage {
 
     defaultTicketStatuses.forEach(status => this.ticketStatuses.set(status.id, status));
 
-    // Sample services
+    // Sample services - إصلاح البيانات لضمان الثبات والحماية
     const sampleServices: Service[] = [
       {
         id: "66b131cc-ccec-49a7-b832-972f4ba29a7b",
@@ -480,7 +488,13 @@ export class MemStorage implements IStorage {
         featured: "false",
         technologies: ["React Native", "Flutter", "Swift", "Kotlin", "Firebase"],
         deliveryTime: "4-8 أسابيع",
-        startingPrice: null
+        startingPrice: null,
+        // حقول الحماية والتدقيق
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isDeleted: false,
+        createdBy: "admin-001",
+        updatedBy: "admin-001"
       },
       {
         id: "562fce34-abbd-4ba9-abc5-bc6b4afe61c7",
@@ -491,7 +505,13 @@ export class MemStorage implements IStorage {
         featured: "true",
         technologies: ["React", "Next.js", "Node.js", "TypeScript", "PostgreSQL"],
         deliveryTime: "3-6 أسابيع",
-        startingPrice: null
+        startingPrice: null,
+        // حقول الحماية والتدقيق
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isDeleted: false,
+        createdBy: "admin-001",
+        updatedBy: "admin-001"
       },
       {
         id: "d7e8f9g0-h1i2-j3k4-l5m6-n7o8p9q0r1s2",
@@ -502,7 +522,13 @@ export class MemStorage implements IStorage {
         featured: "true",
         technologies: ["Electron", ".NET Core", "Qt Framework", "JavaFX", "C# WPF", "Python PyQt", "C++ MFC", "Cross-Platform"],
         deliveryTime: "6-12 أسبوع",
-        startingPrice: null
+        startingPrice: null,
+        // حقول الحماية والتدقيق
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isDeleted: false,
+        createdBy: "admin-001",
+        updatedBy: "admin-001"
       },
       {
         id: "m9n8b7v6-c5x4-z3a2-s1d0-f9g8h7j6k5l4",
@@ -513,7 +539,13 @@ export class MemStorage implements IStorage {
         featured: "true",
         technologies: ["AI/ML Integration", "TensorFlow Mobile", "Core ML", "OpenAI API", "Computer Vision", "NLP", "React Native AI", "Smart Analytics", "Predictive Models"],
         deliveryTime: "8-16 أسبوع",
-        startingPrice: null
+        startingPrice: null,
+        // حقول الحماية والتدقيق
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isDeleted: false,
+        createdBy: "admin-001",
+        updatedBy: "admin-001"
       },
       {
         id: "9a6c839d-2a5c-4418-832a-2a5bd14dcf7e",
@@ -524,7 +556,13 @@ export class MemStorage implements IStorage {
         featured: "false",
         technologies: ["Adobe Creative Suite", "Figma", "Sketch", "Illustrator", "Photoshop"],
         deliveryTime: "1-3 أسابيع",
-        startingPrice: null
+        startingPrice: null,
+        // حقول الحماية والتدقيق
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isDeleted: false,
+        createdBy: "admin-001",
+        updatedBy: "admin-001"
       },
       {
         id: "e4f7b3d1-8c9a-4b5d-9e2f-1a3c5d7e9f1b",
@@ -535,7 +573,13 @@ export class MemStorage implements IStorage {
         featured: "false",
         technologies: ["Google Ads", "Facebook Ads", "Instagram", "LinkedIn", "Analytics"],
         deliveryTime: "مستمر",
-        startingPrice: null
+        startingPrice: null,
+        // حقول الحماية والتدقيق
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isDeleted: false,
+        createdBy: "admin-001",
+        updatedBy: "admin-001"
       },
       {
         id: "f5a8c2b4-7d6e-4c9f-8a1b-3e5g7h9i2j4k",
@@ -546,7 +590,13 @@ export class MemStorage implements IStorage {
         featured: "false",
         technologies: ["Python", "TensorFlow", "OpenAI API", "Machine Learning", "Computer Vision"],
         deliveryTime: "6-12 أسبوع",
-        startingPrice: null
+        startingPrice: null,
+        // حقول الحماية والتدقيق
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isDeleted: false,
+        createdBy: "admin-001",
+        updatedBy: "admin-001"
       },
       {
         id: "be5527f7-3381-48f8-9ff2-21132038ae59",
@@ -557,7 +607,13 @@ export class MemStorage implements IStorage {
         featured: "true",
         technologies: ["ERPNext v15", "Python", "Frappe Framework", "MariaDB", "Redis", "Espresso UI"],
         deliveryTime: "8-16 أسبوع",
-        startingPrice: 2500
+        startingPrice: "2500", // تصحيح نوع البيانات - string بدلاً من number
+        // حقول الحماية والتدقيق
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isDeleted: false,
+        createdBy: "admin-001",
+        updatedBy: "admin-001"
       }
     ];
 
