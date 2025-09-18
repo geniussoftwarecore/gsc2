@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/lang";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Smartphone, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
+import { SiAndroid, SiApple } from "react-icons/si";
 
 interface ServiceHeroProps {
   title: string;
@@ -36,7 +38,74 @@ export function ServiceHero({
       {/* Background decoration */}
       <div className="absolute inset-0 bg-grid-gray-100/50 bg-[size:32px_32px] opacity-30" />
       
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      {/* Platform Icons Bar */}
+      <div className="absolute top-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-800/50 z-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <TooltipProvider>
+            <div className="flex items-center justify-center gap-8 py-4" data-testid="bar-platforms">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button 
+                      className="flex items-center gap-3 px-4 py-2 rounded-lg bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+                      aria-label={dir === 'rtl' ? 'تطبيقات أندرويد' : 'Android Apps'}
+                      data-testid="badge-android"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          // Could add future navigation to Android apps section
+                        }
+                      }}
+                    >
+                      <SiAndroid className="w-6 h-6 text-green-600 dark:text-green-400" />
+                      <span className="text-sm font-medium text-green-700 dark:text-green-300">Android</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{dir === 'rtl' ? 'تطبيقات أندرويد' : 'Android Apps'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </motion.div>
+
+              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button 
+                      className="flex items-center gap-3 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
+                      aria-label={dir === 'rtl' ? 'تطبيقات آيفون' : 'iOS Apps'}
+                      data-testid="badge-ios"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          // Could add future navigation to iOS apps section
+                        }
+                      }}
+                    >
+                      <SiApple className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">iOS</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{dir === 'rtl' ? 'تطبيقات آيفون' : 'iOS Apps'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </motion.div>
+            </div>
+          </TooltipProvider>
+        </div>
+      </div>
+      
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-16">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           
           {/* Content */}
