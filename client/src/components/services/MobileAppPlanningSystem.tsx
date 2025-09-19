@@ -12,6 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/i18n/lang";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import {
   Smartphone,
@@ -140,7 +142,6 @@ export default function MobileAppPlanningSystem() {
   });
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const steps: AppPlanningStep[] = [
     {
@@ -462,12 +463,15 @@ export default function MobileAppPlanningSystem() {
     }));
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      // Here you would send the request to the backend
-      // For now, we'll just show a success toast
-      
+  // Mutation for submitting the form
+  const submitMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      return await apiRequest('/api/mobile-app-orders', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+    onSuccess: (data) => {
       toast({
         title: lang === 'ar' ? 'تم إرسال الطلب بنجاح!' : 'Request submitted successfully!',
         description: lang === 'ar' 
@@ -493,8 +497,8 @@ export default function MobileAppPlanningSystem() {
       });
       setUploadedFiles([]);
       setCurrentStep(0);
-
-    } catch (error) {
+    },
+    onError: (error: any) => {
       toast({
         title: lang === 'ar' ? 'خطأ في إرسال الطلب' : 'Error submitting request',
         description: lang === 'ar' 
@@ -502,9 +506,57 @@ export default function MobileAppPlanningSystem() {
           : 'There was an error submitting your request. Please try again.',
         variant: 'destructive',
       });
-    } finally {
-      setIsSubmitting(false);
+    },
+  });
+
+  const handleSubmit = async () => {
+    // Create FormData object for file upload
+    const formData = new FormData();
+    
+    // Add all form fields
+    formData.append('customerName', projectDetails.contactName);
+    formData.append('customerEmail', projectDetails.contactEmail);
+    if (projectDetails.contactPhone) {
+      formData.append('customerPhone', projectDetails.contactPhone);
     }
+    
+    formData.append('appType', projectDetails.appType);
+    if (projectDetails.projectName) {
+      formData.append('appName', projectDetails.projectName);
+    }
+    if (projectDetails.projectDescription) {
+      formData.append('appDescription', projectDetails.projectDescription);
+    }
+    
+    // Add selected features as JSON string
+    formData.append('selectedFeatures', JSON.stringify(projectDetails.features));
+    
+    if (projectDetails.additionalNotes) {
+      formData.append('additionalRequirements', projectDetails.additionalNotes);
+    }
+    
+    if (projectDetails.budget) {
+      formData.append('estimatedBudget', projectDetails.budget);
+    }
+    
+    if (projectDetails.timeline) {
+      formData.append('preferredTimeline', projectDetails.timeline);
+    }
+    
+    // Add platforms as additional info
+    if (projectDetails.platforms.length > 0) {
+      const platformInfo = `Platforms: ${projectDetails.platforms.join(', ')}`;
+      const existingReq = projectDetails.additionalNotes || '';
+      formData.set('additionalRequirements', existingReq ? `${existingReq}\n\n${platformInfo}` : platformInfo);
+    }
+    
+    // Add uploaded files
+    uploadedFiles.forEach((file, index) => {
+      formData.append('attachedFiles', file);
+    });
+    
+    // Submit the form
+    await submitMutation.mutateAsync(formData);
   };
 
   const isStepValid = (stepIndex: number): boolean => {
@@ -1249,11 +1301,11 @@ export default function MobileAppPlanningSystem() {
               ) : (
                 <Button
                   onClick={handleSubmit}
-                  disabled={!isStepValid(currentStep) || isSubmitting}
+                  disabled={!isStepValid(currentStep) || submitMutation.isPending}
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
                   data-testid="button-submit"
                 >
-                  {isSubmitting ? (
+                  {submitMutation.isPending ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       {lang === 'ar' ? 'جاري الإرسال...' : 'Submitting...'}
