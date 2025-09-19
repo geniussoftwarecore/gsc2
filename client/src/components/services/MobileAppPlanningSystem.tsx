@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -40,7 +39,6 @@ import {
   Lock,
   Bell,
   Share2,
-  Palette,
   Code,
   Database,
   Cloud,
@@ -52,32 +50,44 @@ import {
   Calculator,
   Send,
   Apple,
-  Monitor,
-  X
+  X,
+  Building,
+  Trophy,
+  BookOpen,
+  Activity,
+  Sparkles,
+  PlusCircle
 } from "lucide-react";
 import { SiAndroid } from "react-icons/si";
 
 interface AppPlanningStep {
   id: number;
   title: string;
+  titleAr: string;
   description: string;
+  descriptionAr: string;
   completed: boolean;
 }
 
 interface AppTypeOption {
   id: string;
   title: string;
+  titleAr: string;
   description: string;
+  descriptionAr: string;
   icon: any;
   color: string;
   bgColor: string;
   features: string[];
+  featuresAr: string[];
 }
 
 interface FeatureOption {
   id: string;
   title: string;
+  titleAr: string;
   description: string;
+  descriptionAr: string;
   icon: any;
   category: 'core' | 'business' | 'advanced';
   required: boolean;
@@ -86,7 +96,9 @@ interface FeatureOption {
 interface PlatformOption {
   id: 'ios' | 'android' | 'both';
   title: string;
+  titleAr: string;
   description: string;
+  descriptionAr: string;
   icon: any;
   recommended?: boolean;
 }
@@ -107,11 +119,11 @@ interface ProjectDetails {
 }
 
 export default function MobileAppPlanningSystem() {
-  const { dir } = useLanguage();
+  const { dir, lang } = useLanguage();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [projectDetails, setProjectDetails] = useState<ProjectDetails>({
     appType: '',
     platforms: [],
@@ -127,41 +139,64 @@ export default function MobileAppPlanningSystem() {
     files: []
   });
 
-  const planningSteps: AppPlanningStep[] = [
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const steps: AppPlanningStep[] = [
+    {
+      id: 0,
+      title: "Choose App Type",
+      titleAr: "اختر نوع التطبيق",
+      description: "What type of mobile app do you want to create?",
+      descriptionAr: "ما نوع تطبيق الموبايل الذي تريد إنشاءه؟",
+      completed: false
+    },
     {
       id: 1,
-      title: 'نوع التطبيق',
-      description: 'حدد نوع وطبيعة التطبيق المطلوب',
-      completed: !!projectDetails.appType
+      title: "Select Platform",
+      titleAr: "اختر المنصة",
+      description: "Which platforms do you want to target?",
+      descriptionAr: "ما المنصات التي تريد استهدافها؟",
+      completed: false
     },
     {
       id: 2,
-      title: 'المنصات',
-      description: 'اختر المنصات المستهدفة',
-      completed: projectDetails.platforms.length > 0
+      title: "Choose Features",
+      titleAr: "اختر المميزات",
+      description: "What features do you need in your app?",
+      descriptionAr: "ما المميزات التي تحتاجها في تطبيقك؟",
+      completed: false
     },
     {
       id: 3,
-      title: 'الميزات',
-      description: 'حدد الميزات والوظائف المطلوبة',
-      completed: projectDetails.features.length > 0
+      title: "Project Details",
+      titleAr: "تفاصيل المشروع",
+      description: "Tell us more about your project",
+      descriptionAr: "أخبرنا المزيد عن مشروعك",
+      completed: false
     },
     {
       id: 4,
-      title: 'تفاصيل المشروع',
-      description: 'أدخل تفاصيل مشروعك',
-      completed: !!(projectDetails.projectName && projectDetails.projectDescription)
+      title: "Upload Files",
+      titleAr: "رفع الملفات",
+      description: "Upload any relevant files or documents",
+      descriptionAr: "ارفع أي ملفات أو مستندات ذات صلة",
+      completed: false
     },
     {
       id: 5,
-      title: 'الملفات والمراجع',
-      description: 'ارفع الملفات والمراجع',
-      completed: true // Always available
+      title: "Contact Information",
+      titleAr: "معلومات الاتصال",
+      description: "How can we reach you?",
+      descriptionAr: "كيف يمكننا التواصل معك؟",
+      completed: false
     },
     {
       id: 6,
-      title: 'إرسال الطلب',
-      description: 'مراجعة وإرسال طلب التطوير',
+      title: "Review & Submit",
+      titleAr: "مراجعة وإرسال",
+      description: "Review your request before submitting",
+      descriptionAr: "راجع طلبك قبل الإرسال",
       completed: false
     }
   ];
@@ -169,97 +204,105 @@ export default function MobileAppPlanningSystem() {
   const appTypes: AppTypeOption[] = [
     {
       id: 'ecommerce',
-      title: 'تطبيق تجاري',
-      description: 'متاجر إلكترونية ومنصات بيع وشراء',
+      title: 'E-commerce',
+      titleAr: 'التجارة الإلكترونية',
+      description: 'Online shopping and marketplace applications',
+      descriptionAr: 'تطبيقات التسوق الإلكتروني والأسواق الرقمية',
       icon: ShoppingCart,
-      color: 'emerald',
-      bgColor: 'bg-emerald-50 hover:bg-emerald-100',
-      features: ['متجر إلكتروني', 'بوابات دفع', 'إدارة منتجات', 'تتبع شحنات']
+      color: 'text-green-600',
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+      features: ['Product catalog', 'Shopping cart', 'Payment integration', 'Order tracking', 'Reviews'],
+      featuresAr: ['كتالوج المنتجات', 'سلة التسوق', 'تكامل الدفع', 'تتبع الطلبات', 'التقييمات']
     },
     {
       id: 'educational',
-      title: 'تطبيق تعليمي',
-      description: 'منصات تعلم ومناهج دراسية',
+      title: 'Educational',
+      titleAr: 'التعليمية',
+      description: 'Learning management and educational content apps',
+      descriptionAr: 'تطبيقات إدارة التعلم والمحتوى التعليمي',
       icon: GraduationCap,
-      color: 'blue',
-      bgColor: 'bg-blue-50 hover:bg-blue-100',
-      features: ['دورات تفاعلية', 'اختبارات', 'شهادات', 'تتبع التقدم']
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+      features: ['Course management', 'Video streaming', 'Quiz system', 'Progress tracking', 'Certificates'],
+      featuresAr: ['إدارة الدورات', 'البث المرئي', 'نظام الاختبارات', 'تتبع التقدم', 'الشهادات']
     },
     {
       id: 'healthcare',
-      title: 'تطبيق صحي',
-      description: 'خدمات طبية واستشارات صحية',
+      title: 'Healthcare',
+      titleAr: 'الصحية',
+      description: 'Medical and health monitoring applications',
+      descriptionAr: 'تطبيقات طبية ومراقبة الصحة',
       icon: Heart,
-      color: 'red',
-      bgColor: 'bg-red-50 hover:bg-red-100',
-      features: ['حجز مواعيد', 'ملف طبي', 'استشارات', 'تذكير أدوية']
+      color: 'text-red-600',
+      bgColor: 'bg-red-50 dark:bg-red-900/20',
+      features: ['Appointment booking', 'Health records', 'Telemedicine', 'Medication reminders'],
+      featuresAr: ['حجز المواعيد', 'السجلات الصحية', 'الطب عن بُعد', 'تذكير الأدوية']
     },
     {
       id: 'social',
-      title: 'تطبيق اجتماعي',
-      description: 'شبكات اجتماعية ومنصات تواصل',
+      title: 'Social Media',
+      titleAr: 'التواصل الاجتماعي',
+      description: 'Social networking and community applications',
+      descriptionAr: 'تطبيقات الشبكات الاجتماعية والمجتمعات',
       icon: Users,
-      color: 'purple',
-      bgColor: 'bg-purple-50 hover:bg-purple-100',
-      features: ['منشورات', 'محادثات', 'مجموعات', 'بث مباشر']
-    },
-    {
-      id: 'booking',
-      title: 'تطبيق حجوزات',
-      description: 'حجز خدمات ومواعيد وأماكن',
-      icon: Calendar,
-      color: 'orange',
-      bgColor: 'bg-orange-50 hover:bg-orange-100',
-      features: ['جدولة مواعيد', 'دفع أونلاين', 'تذكيرات', 'تقييمات']
-    },
-    {
-      id: 'delivery',
-      title: 'تطبيق توصيل',
-      description: 'خدمات توصيل وتتبع طلبات',
-      icon: MapPin,
-      color: 'green',
-      bgColor: 'bg-green-50 hover:bg-green-100',
-      features: ['تتبع GPS', 'إشعارات', 'دفع آمن', 'تقييم خدمة']
-    },
-    {
-      id: 'entertainment',
-      title: 'تطبيق ترفيهي',
-      description: 'ألعاب ووسائط ترفيهية',
-      icon: Gamepad2,
-      color: 'pink',
-      bgColor: 'bg-pink-50 hover:bg-pink-100',
-      features: ['محتوى تفاعلي', 'ألعاب', 'فيديوهات', 'مشاركة اجتماعية']
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+      features: ['User profiles', 'Chat system', 'Content sharing', 'Social feed', 'Groups'],
+      featuresAr: ['ملفات المستخدمين', 'نظام الدردشة', 'مشاركة المحتوى', 'الخلاصة الاجتماعية', 'المجموعات']
     },
     {
       id: 'business',
-      title: 'تطبيق أعمال',
-      description: 'حلول إدارية ومؤسسية',
+      title: 'Business',
+      titleAr: 'الأعمال',
+      description: 'Enterprise and productivity applications',
+      descriptionAr: 'تطبيقات المؤسسات والإنتاجية',
       icon: Briefcase,
-      color: 'slate',
-      bgColor: 'bg-slate-50 hover:bg-slate-100',
-      features: ['إدارة مهام', 'تقارير', 'فرق عمل', 'تحليلات']
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+      features: ['CRM system', 'Task management', 'Analytics', 'Team collaboration', 'Reporting'],
+      featuresAr: ['نظام إدارة العملاء', 'إدارة المهام', 'التحليلات', 'التعاون الجماعي', 'التقارير']
+    },
+    {
+      id: 'entertainment',
+      title: 'Entertainment',
+      titleAr: 'الترفيه',
+      description: 'Gaming, media streaming, and entertainment apps',
+      descriptionAr: 'تطبيقات الألعاب والبث الإعلامي والترفيه',
+      icon: Play,
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-50 dark:bg-pink-900/20',
+      features: ['Media streaming', 'Gaming features', 'Social features', 'Content management'],
+      featuresAr: ['البث الإعلامي', 'ميزات الألعاب', 'الميزات الاجتماعية', 'إدارة المحتوى']
     }
   ];
 
   const platformOptions: PlatformOption[] = [
     {
-      id: 'both',
-      title: 'أندرويد و iOS',
-      description: 'تطوير لكلا النظامين (موصى)',
-      icon: Smartphone,
-      recommended: true
+      id: 'ios',
+      title: 'iOS',
+      titleAr: 'iOS',
+      description: 'Apple App Store for iPhone and iPad',
+      descriptionAr: 'متجر تطبيقات آبل للآيفون والآيباد',
+      icon: Apple,
+      recommended: false
     },
     {
       id: 'android',
-      title: 'أندرويد فقط',
-      description: 'نظام أندرويد (Google Play)',
-      icon: SiAndroid
+      title: 'Android',
+      titleAr: 'أندرويد',
+      description: 'Google Play Store for Android devices',
+      descriptionAr: 'متجر جوجل بلاي لأجهزة الأندرويد',
+      icon: SiAndroid,
+      recommended: false
     },
     {
-      id: 'ios',
-      title: 'iOS فقط', 
-      description: 'نظام آبل (App Store)',
-      icon: Apple
+      id: 'both',
+      title: 'Both Platforms',
+      titleAr: 'كلا المنصتين',
+      description: 'Cross-platform app for iOS and Android',
+      descriptionAr: 'تطبيق متعدد المنصات لنظامي iOS والأندرويد',
+      icon: Smartphone,
+      recommended: true
     }
   ];
 
@@ -267,25 +310,31 @@ export default function MobileAppPlanningSystem() {
     // Core Features
     {
       id: 'user-auth',
-      title: 'نظام المستخدمين',
-      description: 'تسجيل دخول وإنشاء حسابات',
-      icon: Users,
+      title: 'User Authentication',
+      titleAr: 'تسجيل الدخول',
+      description: 'Login, signup, and user management',
+      descriptionAr: 'تسجيل الدخول والتسجيل وإدارة المستخدمين',
+      icon: Shield,
       category: 'core',
       required: true
     },
     {
-      id: 'push-notifications',
-      title: 'الإشعارات الفورية',
-      description: 'إرسال إشعارات للمستخدمين',
-      icon: Bell,
+      id: 'offline-support',
+      title: 'Offline Support',
+      titleAr: 'العمل بدون إنترنت',
+      description: 'App works without internet connection',
+      descriptionAr: 'يعمل التطبيق بدون الحاجة لاتصال بالإنترنت',
+      icon: Database,
       category: 'core',
       required: false
     },
     {
-      id: 'offline-mode',
-      title: 'العمل بدون إنترنت',
-      description: 'وضعية عدم الاتصال',
-      icon: Shield,
+      id: 'push-notifications',
+      title: 'Push Notifications',
+      titleAr: 'الإشعارات الفورية',
+      description: 'Send notifications to users',
+      descriptionAr: 'إرسال الإشعارات للمستخدمين',
+      icon: Bell,
       category: 'core',
       required: false
     },
@@ -293,33 +342,31 @@ export default function MobileAppPlanningSystem() {
     // Business Features
     {
       id: 'payment-gateway',
-      title: 'بوابات الدفع',
-      description: 'دفع آمن عبر الإنترنت',
+      title: 'Payment Integration',
+      titleAr: 'تكامل الدفع',
+      description: 'Credit cards, PayPal, and other payment methods',
+      descriptionAr: 'البطاقات الائتمانية وباي بال وطرق الدفع الأخرى',
       icon: CreditCard,
       category: 'business',
       required: false
     },
     {
       id: 'analytics',
-      title: 'التحليلات',
-      description: 'تقارير وإحصائيات تفصيلية',
+      title: 'Analytics & Reporting',
+      titleAr: 'التحليلات والتقارير',
+      description: 'Track user behavior and generate reports',
+      descriptionAr: 'تتبع سلوك المستخدمين وتوليد التقارير',
       icon: BarChart3,
       category: 'business',
       required: false
     },
     {
-      id: 'social-sharing',
-      title: 'مشاركة اجتماعية',
-      description: 'مشاركة على وسائل التواصل',
-      icon: Share2,
-      category: 'business',
-      required: false
-    },
-    {
-      id: 'chat-system',
-      title: 'نظام محادثة',
-      description: 'دردشة مباشرة بين المستخدمين',
-      icon: MessageCircle,
+      id: 'geolocation',
+      title: 'GPS & Location',
+      titleAr: 'GPS والموقع',
+      description: 'Location-based services and mapping',
+      descriptionAr: 'الخدمات المعتمدة على الموقع والخرائط',
+      icon: MapPin,
       category: 'business',
       required: false
     },
@@ -327,939 +374,901 @@ export default function MobileAppPlanningSystem() {
     // Advanced Features
     {
       id: 'ai-integration',
-      title: 'الذكاء الاصطناعي',
-      description: 'ميزات ذكية وتعلم آلي',
+      title: 'AI Integration',
+      titleAr: 'تكامل الذكاء الاصطناعي',
+      description: 'Machine learning and AI-powered features',
+      descriptionAr: 'ميزات التعلم الآلي والذكاء الاصطناعي',
+      icon: Sparkles,
+      category: 'advanced',
+      required: false
+    },
+    {
+      id: 'ar-vr',
+      title: 'AR/VR Features',
+      titleAr: 'ميزات الواقع المعزز/الافتراضي',
+      description: 'Augmented and virtual reality integration',
+      descriptionAr: 'تكامل الواقع المعزز والافتراضي',
+      icon: Activity,
+      category: 'advanced',
+      required: false
+    },
+    {
+      id: 'iot-integration',
+      title: 'IoT Integration',
+      titleAr: 'تكامل إنترنت الأشياء',
+      description: 'Connect with smart devices and sensors',
+      descriptionAr: 'الاتصال بالأجهزة الذكية وأجهزة الاستشعار',
       icon: Zap,
-      category: 'advanced',
-      required: false
-    },
-    {
-      id: 'gps-location',
-      title: 'تحديد الموقع GPS',
-      description: 'خدمات الموقع والخرائط',
-      icon: MapPin,
-      category: 'advanced',
-      required: false
-    },
-    {
-      id: 'camera-integration',
-      title: 'تكامل الكاميرا',
-      description: 'التقاط ومعالجة الصور',
-      icon: Camera,
-      category: 'advanced',
-      required: false
-    },
-    {
-      id: 'cloud-sync',
-      title: 'مزامنة سحابية',
-      description: 'نسخ احتياطي وتزامن البيانات',
-      icon: Cloud,
       category: 'advanced',
       required: false
     }
   ];
 
   const handleStepChange = (step: number) => {
-    if (step <= currentStep + 1) {
+    if (step <= currentStep + 1 && step >= 0) {
       setCurrentStep(step);
     }
   };
 
-  const handleAppTypeSelect = (appTypeId: string) => {
-    setProjectDetails(prev => ({ ...prev, appType: appTypeId }));
-  };
-
-  const handlePlatformSelect = (platform: string) => {
-    setProjectDetails(prev => {
-      const newPlatforms = prev.platforms.includes(platform)
-        ? prev.platforms.filter(p => p !== platform)
-        : [...prev.platforms, platform];
-      return { ...prev, platforms: newPlatforms };
-    });
-  };
-
-  const handleFeatureSelect = (featureId: string) => {
-    setProjectDetails(prev => {
-      const newFeatures = prev.features.includes(featureId)
-        ? prev.features.filter(f => f !== featureId)
-        : [...prev.features, featureId];
-      return { ...prev, features: newFeatures };
-    });
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const newFiles = Array.from(event.target.files);
-      setProjectDetails(prev => ({
-        ...prev,
-        files: [...prev.files, ...newFiles]
-      }));
-      toast({
-        title: "تم رفع الملفات",
-        description: `تم رفع ${newFiles.length} ملف بنجاح`
-      });
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
     }
   };
 
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleAppTypeSelect = (typeId: string) => {
+    setProjectDetails(prev => ({
+      ...prev,
+      appType: typeId
+    }));
+  };
+
+  const handlePlatformSelect = (platforms: string[]) => {
+    setProjectDetails(prev => ({
+      ...prev,
+      platforms
+    }));
+  };
+
+  const handleFeatureToggle = (featureId: string, checked: boolean) => {
+    setProjectDetails(prev => ({
+      ...prev,
+      features: checked 
+        ? [...prev.features, featureId]
+        : prev.features.filter(id => id !== featureId)
+    }));
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setUploadedFiles(prev => [...prev, ...files]);
+    setProjectDetails(prev => ({
+      ...prev,
+      files: [...prev.files, ...files]
+    }));
+  };
+
   const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
     setProjectDetails(prev => ({
       ...prev,
       files: prev.files.filter((_, i) => i !== index)
     }));
   };
 
-  const handleSubmitProject = async () => {
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
     try {
-      // Here we would typically send the data to the API
+      // Here you would send the request to the backend
+      // For now, we'll just show a success toast
+      
       toast({
-        title: "تم إرسال طلبك بنجاح!",
-        description: "سيتم التواصل معك خلال 24 ساعة لمناقشة التفاصيل"
+        title: lang === 'ar' ? 'تم إرسال الطلب بنجاح!' : 'Request submitted successfully!',
+        description: lang === 'ar' 
+          ? 'سيتم التواصل معك قريباً من قبل فريقنا المختص.'
+          : 'Our team will contact you shortly to discuss your project.',
+        duration: 5000,
       });
-      
-      // Reset form or redirect to success page
-      console.log('Project submitted:', projectDetails);
-      
+
+      // Reset form
+      setProjectDetails({
+        appType: '',
+        platforms: [],
+        features: [],
+        projectName: '',
+        projectDescription: '',
+        timeline: '',
+        budget: '',
+        contactName: '',
+        contactEmail: '',
+        contactPhone: '',
+        additionalNotes: '',
+        files: []
+      });
+      setUploadedFiles([]);
+      setCurrentStep(0);
+
     } catch (error) {
       toast({
-        title: "حدث خطأ",
-        description: "لم يتم إرسال الطلب، حاول مرة أخرى",
-        variant: "destructive"
+        title: lang === 'ar' ? 'خطأ في إرسال الطلب' : 'Error submitting request',
+        description: lang === 'ar' 
+          ? 'حدث خطأ أثناء إرسال طلبك. يرجى المحاولة مرة أخرى.'
+          : 'There was an error submitting your request. Please try again.',
+        variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const canProceedToNext = () => {
-    switch (currentStep) {
-      case 1:
+  const isStepValid = (stepIndex: number): boolean => {
+    switch (stepIndex) {
+      case 0:
         return !!projectDetails.appType;
-      case 2:
+      case 1:
         return projectDetails.platforms.length > 0;
-      case 3:
+      case 2:
         return projectDetails.features.length > 0;
+      case 3:
+        return !!(projectDetails.projectName && projectDetails.projectDescription);
       case 4:
-        return !!(projectDetails.projectName && projectDetails.projectDescription && projectDetails.contactName && projectDetails.contactEmail);
+        return true; // File upload is optional
+      case 5:
+        return !!(projectDetails.contactName && projectDetails.contactEmail);
+      case 6:
+        return true; // Review step
       default:
-        return true;
+        return false;
     }
   };
 
-  const getProgressPercentage = () => {
-    const updatedSteps = planningSteps.map((step, index) => ({
-      ...step,
-      completed: index + 1 === 1 ? !!projectDetails.appType :
-                index + 1 === 2 ? projectDetails.platforms.length > 0 :
-                index + 1 === 3 ? projectDetails.features.length > 0 :
-                index + 1 === 4 ? !!(projectDetails.projectName && projectDetails.projectDescription && projectDetails.contactName && projectDetails.contactEmail) :
-                index + 1 === 5 ? true :
-                index + 1 === 6 ? false : false
-    }));
-    const completedSteps = updatedSteps.filter(step => step.completed).length;
-    return (completedSteps / planningSteps.length) * 100;
+  const getProgress = () => {
+    return ((currentStep + 1) / steps.length) * 100;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-sky-light/10 to-white py-12" dir={dir}>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-        
-        {/* Header with Progress */}
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-8"
-          >
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <motion.div 
-                className="p-3 bg-primary/10 rounded-2xl"
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800" dir={dir}>
+      {/* Hero Section with Interactive Mobile Icons */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative container mx-auto px-4 py-24">
+          <div className="text-center">
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="flex justify-center items-center gap-8 mb-8"
+            >
+              {/* Interactive iOS Icon */}
+              <motion.div
                 whileHover={{ scale: 1.1, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 cursor-pointer"
+                data-testid="icon-ios"
               >
-                <Smartphone className="w-8 h-8 text-primary" />
+                <Apple className="w-20 h-20 text-white" />
               </motion.div>
-              <motion.div 
-                className="p-3 bg-primary/10 rounded-2xl"
-                whileHover={{ scale: 1.1, rotate: -5 }}
-              >
-                <Apple className="w-8 h-8 text-primary" />
-              </motion.div>
-            </div>
-            
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              تطوير تطبيقات الموبايل
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              خطط مشروع تطبيقك بكل تفاصيله من خلال نظامنا التفاعلي المتطور
-            </p>
-          </motion.div>
 
-          {/* Progress Bar */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-8"
-          >
+              {/* Central Mobile Icon */}
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm rounded-3xl p-8"
+                data-testid="icon-mobile-central"
+              >
+                <Smartphone className="w-24 h-24 text-white" />
+              </motion.div>
+
+              {/* Interactive Android Icon */}
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: -5 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 cursor-pointer"
+                data-testid="icon-android"
+              >
+                <SiAndroid className="w-20 h-20 text-white" />
+              </motion.div>
+            </motion.div>
+
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="text-4xl md:text-6xl font-bold text-white mb-6"
+              data-testid="heading-service-title"
+            >
+              {lang === 'ar' ? 'تطوير تطبيقات الموبايل' : 'Mobile App Development'}
+            </motion.h1>
+
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto"
+              data-testid="text-service-description"
+            >
+              {lang === 'ar' 
+                ? 'نبني تطبيقات موبايل احترافية ومبتكرة لنظامي iOS و Android بأحدث التقنيات وأعلى معايير الجودة'
+                : 'We build professional and innovative mobile applications for iOS and Android using the latest technologies and highest quality standards'
+              }
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="flex flex-wrap justify-center gap-4 text-white/90"
+            >
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                {lang === 'ar' ? 'تصميم احترافي' : 'Professional Design'}
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                {lang === 'ar' ? 'أداء عالي' : 'High Performance'}
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                {lang === 'ar' ? 'أمان متقدم' : 'Advanced Security'}
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                {lang === 'ar' ? 'دعم فني متواصل' : '24/7 Support'}
+              </Badge>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* Planning Wizard */}
+      <div className="container mx-auto px-4 py-12">
+        <Card className="max-w-4xl mx-auto shadow-2xl">
+          <CardHeader className="pb-4">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-medium text-gray-700">مرحلة التخطيط</span>
-              <span className="text-sm font-medium text-primary">{Math.round(getProgressPercentage())}%</span>
+              <CardTitle className="text-2xl font-bold">
+                {lang === 'ar' ? 'خطط مشروع تطبيقك' : 'Plan Your App Project'}
+              </CardTitle>
+              <Badge variant="outline">
+                {lang === 'ar' ? `الخطوة ${currentStep + 1} من ${steps.length}` : `Step ${currentStep + 1} of ${steps.length}`}
+              </Badge>
             </div>
-            <Progress value={getProgressPercentage()} className="h-2 mb-6" />
-            
-            {/* Step Indicators */}
-            <div className="grid grid-cols-6 gap-2">
-              {planningSteps.map((step, index) => (
-                <motion.div
+            <Progress value={getProgress()} className="h-2" data-testid="progress-wizard" />
+          </CardHeader>
+
+          <CardContent>
+            {/* Step Navigation */}
+            <div className="flex flex-wrap justify-center gap-2 mb-8">
+              {steps.map((step, index) => (
+                <motion.button
                   key={step.id}
+                  onClick={() => handleStepChange(index)}
                   className={cn(
-                    "p-3 rounded-xl text-center cursor-pointer transition-all duration-300",
-                    currentStep === step.id
-                      ? "bg-primary text-white shadow-lg"
-                      : step.completed
-                      ? "bg-primary/10 text-primary"
-                      : "bg-gray-100 text-gray-500"
+                    "px-3 py-1 rounded-full text-sm font-medium transition-all",
+                    index <= currentStep
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
+                    index === currentStep && "ring-2 ring-blue-300 ring-offset-2"
                   )}
-                  onClick={() => handleStepChange(step.id)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  data-testid={`step-${index}`}
                 >
-                  <div className="text-xs font-medium mb-1">
-                    {step.id === currentStep && <div className="w-2 h-2 bg-white rounded-full mx-auto mb-1" />}
-                  </div>
-                  <div className="text-xs font-medium">
-                    {step.title}
-                  </div>
-                </motion.div>
+                  {lang === 'ar' ? step.titleAr : step.title}
+                </motion.button>
               ))}
             </div>
-          </motion.div>
-        </div>
 
-        {/* Step Content */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
-          >
-            
-            {/* Step 1: App Type Selection */}
-            {currentStep === 1 && (
-              <div className="p-8">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                    ما نوع التطبيق الذي تريد تطويره؟
-                  </h2>
-                  <p className="text-gray-600">
-                    اختر النوع الذي يناسب فكرة مشروعك
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {appTypes.map((appType) => {
-                    const IconComponent = appType.icon;
-                    const isSelected = projectDetails.appType === appType.id;
-                    
-                    return (
-                      <motion.div
-                        key={appType.id}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Card 
-                          className={cn(
-                            "cursor-pointer transition-all duration-300 border-2",
-                            isSelected 
-                              ? "border-primary shadow-lg ring-2 ring-primary/20" 
-                              : "border-gray-200 hover:border-primary/50",
-                            appType.bgColor
-                          )}
-                          onClick={() => handleAppTypeSelect(appType.id)}
-                          data-testid={`option-apptype-${appType.id}`}
-                        >
-                          <CardHeader className="text-center pb-4">
-                            <div className={cn(
-                              "w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4 transition-all duration-300",
-                              `bg-${appType.color}-100`,
-                              isSelected && "scale-110"
-                            )}>
-                              <IconComponent className={`w-8 h-8 text-${appType.color}-600`} />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="min-h-[400px]"
+              >
+                {/* Step 0: App Type Selection */}
+                {currentStep === 0 && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-6 text-center">
+                      {lang === 'ar' ? 'ما نوع التطبيق الذي تريد تطويره؟' : 'What type of app do you want to develop?'}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {appTypes.map((type) => {
+                        const Icon = type.icon;
+                        const isSelected = projectDetails.appType === type.id;
+                        return (
+                          <motion.div
+                            key={type.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleAppTypeSelect(type.id)}
+                            className={cn(
+                              "cursor-pointer rounded-lg border-2 p-6 transition-all",
+                              isSelected
+                                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md"
+                                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                            )}
+                            data-testid={`app-type-${type.id}`}
+                          >
+                            <div className={cn("w-12 h-12 rounded-full flex items-center justify-center mb-4", type.bgColor)}>
+                              <Icon className={cn("w-6 h-6", type.color)} />
                             </div>
-                            <CardTitle className="text-lg font-bold text-gray-900">
-                              {appType.title}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <p className="text-gray-600 text-sm mb-4 text-center">
-                              {appType.description}
+                            <h4 className="font-semibold text-lg mb-2">
+                              {lang === 'ar' ? type.titleAr : type.title}
+                            </h4>
+                            <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                              {lang === 'ar' ? type.descriptionAr : type.description}
                             </p>
-                            <div className="space-y-2">
-                              {appType.features.map((feature, index) => (
-                                <div key={index} className="flex items-center text-xs text-gray-700">
-                                  <CheckCircle className="w-3 h-3 text-primary mr-2 flex-shrink-0" />
+                            <div className="flex flex-wrap gap-1">
+                              {(lang === 'ar' ? type.featuresAr : type.features).slice(0, 3).map((feature, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
                                   {feature}
-                                </div>
+                                </Badge>
                               ))}
                             </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                            {isSelected && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="mt-4 flex items-center justify-center"
+                              >
+                                <CheckCircle className="w-6 h-6 text-green-600" />
+                              </motion.div>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
-            {/* Step 2: Platform Selection */}
-            {currentStep === 2 && (
-              <div className="p-8">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                    اختر المنصات المستهدفة
-                  </h2>
-                  <p className="text-gray-600">
-                    حدد أنظمة التشغيل التي تريد دعمها
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                  {platformOptions.map((platform) => {
-                    const IconComponent = platform.icon;
-                    const isSelected = projectDetails.platforms.includes(platform.id);
-                    
-                    return (
-                      <motion.div
-                        key={platform.id}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Card 
-                          className={cn(
-                            "cursor-pointer transition-all duration-300 border-2 relative",
-                            isSelected 
-                              ? "border-primary shadow-lg ring-2 ring-primary/20 bg-primary/5" 
-                              : "border-gray-200 hover:border-primary/50"
-                          )}
-                          onClick={() => handlePlatformSelect(platform.id)}
-                          data-testid={`option-platform-${platform.id}`}
-                        >
-                          {platform.recommended && (
-                            <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary text-white">
-                              موصى به
-                            </Badge>
-                          )}
-                          <CardHeader className="text-center">
-                            <div className={cn(
-                              "w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-4 transition-all duration-300",
-                              "bg-primary/10",
-                              isSelected && "scale-110 bg-primary/20"
-                            )}>
-                              <IconComponent className="w-10 h-10 text-primary" />
+                {/* Step 1: Platform Selection */}
+                {currentStep === 1 && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-6 text-center">
+                      {lang === 'ar' ? 'اختر المنصات المستهدفة' : 'Choose Target Platforms'}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+                      {platformOptions.map((platform) => {
+                        const Icon = platform.icon;
+                        const isSelected = projectDetails.platforms.includes(platform.id);
+                        return (
+                          <motion.div
+                            key={platform.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                              if (platform.id === 'both') {
+                                handlePlatformSelect(['both']);
+                              } else if (isSelected) {
+                                handlePlatformSelect(
+                                  projectDetails.platforms.filter(p => p !== platform.id)
+                                );
+                              } else {
+                                handlePlatformSelect(
+                                  [...projectDetails.platforms.filter(p => p !== 'both'), platform.id]
+                                );
+                              }
+                            }}
+                            className={cn(
+                              "cursor-pointer rounded-lg border-2 p-8 text-center transition-all relative",
+                              isSelected
+                                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md"
+                                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                            )}
+                            data-testid={`platform-${platform.id}`}
+                          >
+                            {platform.recommended && (
+                              <Badge className="absolute -top-2 -right-2 bg-green-600">
+                                {lang === 'ar' ? 'مُوصى به' : 'Recommended'}
+                              </Badge>
+                            )}
+                            <div className="flex items-center justify-center mb-4">
+                              <Icon className="w-16 h-16 text-gray-700 dark:text-gray-300" />
                             </div>
-                            <CardTitle className="text-xl font-bold text-gray-900">
-                              {platform.title}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="text-center pt-0">
-                            <p className="text-gray-600">
-                              {platform.description}
+                            <h4 className="font-semibold text-lg mb-2">
+                              {lang === 'ar' ? platform.titleAr : platform.title}
+                            </h4>
+                            <p className="text-gray-600 dark:text-gray-300 text-sm">
+                              {lang === 'ar' ? platform.descriptionAr : platform.description}
                             </p>
                             {isSelected && (
                               <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="mt-4 flex justify-center"
+                                className="mt-4 flex items-center justify-center"
                               >
-                                <CheckCircle className="w-6 h-6 text-primary" />
+                                <CheckCircle className="w-6 h-6 text-green-600" />
                               </motion.div>
                             )}
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Features Selection */}
-            {currentStep === 3 && (
-              <div className="p-8">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                    اختر ميزات التطبيق
-                  </h2>
-                  <p className="text-gray-600">
-                    حدد الوظائف والميزات التي تريدها في تطبيقك
-                  </p>
-                </div>
-
-                <div className="space-y-8">
-                  {/* Core Features */}
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                      <Shield className="w-5 h-5 text-primary mr-2" />
-                      الميزات الأساسية
-                    </h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {featureOptions.filter(f => f.category === 'core').map((feature) => {
-                        const IconComponent = feature.icon;
-                        const isSelected = projectDetails.features.includes(feature.id);
-                        
-                        return (
-                          <motion.div
-                            key={feature.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Card 
-                              className={cn(
-                                "cursor-pointer transition-all duration-300 border",
-                                isSelected 
-                                  ? "border-primary bg-primary/5" 
-                                  : "border-gray-200 hover:border-primary/50",
-                                feature.required && "border-orange-200 bg-orange-50"
-                              )}
-                              onClick={() => !feature.required && handleFeatureSelect(feature.id)}
-                              data-testid={`option-feature-${feature.id}`}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
-                                  <div className={cn(
-                                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                                    "bg-primary/10"
-                                  )}>
-                                    <IconComponent className="w-5 h-5 text-primary" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h4 className="font-semibold text-gray-900 text-sm">
-                                        {feature.title}
-                                      </h4>
-                                      {feature.required && <Badge variant="secondary" className="text-xs">مطلوبة</Badge>}
-                                      {isSelected && <CheckCircle className="w-4 h-4 text-primary" />}
-                                    </div>
-                                    <p className="text-gray-600 text-xs">
-                                      {feature.description}
-                                    </p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
                           </motion.div>
                         );
                       })}
                     </div>
                   </div>
+                )}
 
-                  <Separator />
-
-                  {/* Business Features */}
+                {/* Step 2: Features Selection */}
+                {currentStep === 2 && (
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                      <Briefcase className="w-5 h-5 text-primary mr-2" />
-                      الميزات التجارية
-                    </h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {featureOptions.filter(f => f.category === 'business').map((feature) => {
-                        const IconComponent = feature.icon;
-                        const isSelected = projectDetails.features.includes(feature.id);
-                        
-                        return (
-                          <motion.div
-                            key={feature.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Card 
-                              className={cn(
-                                "cursor-pointer transition-all duration-300 border",
-                                isSelected 
-                                  ? "border-primary bg-primary/5" 
-                                  : "border-gray-200 hover:border-primary/50"
-                              )}
-                              onClick={() => handleFeatureSelect(feature.id)}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
-                                  <div className={cn(
-                                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                                    "bg-primary/10"
-                                  )}>
-                                    <IconComponent className="w-5 h-5 text-primary" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h4 className="font-semibold text-gray-900 text-sm">
-                                        {feature.title}
-                                      </h4>
-                                      {isSelected && <CheckCircle className="w-4 h-4 text-primary" />}
-                                    </div>
-                                    <p className="text-gray-600 text-xs">
-                                      {feature.description}
-                                    </p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Advanced Features */}
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                      <Zap className="w-5 h-5 text-primary mr-2" />
-                      الميزات المتقدمة
-                    </h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {featureOptions.filter(f => f.category === 'advanced').map((feature) => {
-                        const IconComponent = feature.icon;
-                        const isSelected = projectDetails.features.includes(feature.id);
-                        
-                        return (
-                          <motion.div
-                            key={feature.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Card 
-                              className={cn(
-                                "cursor-pointer transition-all duration-300 border",
-                                isSelected 
-                                  ? "border-primary bg-primary/5" 
-                                  : "border-gray-200 hover:border-primary/50"
-                              )}
-                              onClick={() => handleFeatureSelect(feature.id)}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
-                                  <div className={cn(
-                                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                                    "bg-primary/10"
-                                  )}>
-                                    <IconComponent className="w-5 h-5 text-primary" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h4 className="font-semibold text-gray-900 text-sm">
-                                        {feature.title}
-                                      </h4>
-                                      {isSelected && <CheckCircle className="w-4 h-4 text-primary" />}
-                                    </div>
-                                    <p className="text-gray-600 text-xs">
-                                      {feature.description}
-                                    </p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Project Details */}
-            {currentStep === 4 && (
-              <div className="p-8">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                    تفاصيل المشروع
-                  </h2>
-                  <p className="text-gray-600">
-                    أدخل معلومات مشروعك وبيانات التواصل
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                  {/* Project Information */}
-                  <div className="space-y-6">
-                    <h3 className="text-xl font-bold text-gray-900 flex items-center">
-                      <FileText className="w-5 h-5 text-primary mr-2" />
-                      معلومات المشروع
+                    <h3 className="text-xl font-semibold mb-6 text-center">
+                      {lang === 'ar' ? 'اختر مميزات تطبيقك' : 'Choose Your App Features'}
                     </h3>
                     
-                    <div>
-                      <Label htmlFor="projectName">اسم المشروع *</Label>
-                      <Input
-                        id="projectName"
-                        data-testid="input-project-name"
-                        value={projectDetails.projectName}
-                        onChange={(e) => setProjectDetails(prev => ({...prev, projectName: e.target.value}))}
-                        placeholder="أدخل اسم مشروعك"
-                        className="mt-2"
-                      />
+                    {['core', 'business', 'advanced'].map((category) => (
+                      <div key={category} className="mb-8">
+                        <h4 className="text-lg font-medium mb-4 flex items-center gap-2">
+                          {category === 'core' && <Shield className="w-5 h-5 text-blue-600" />}
+                          {category === 'business' && <Briefcase className="w-5 h-5 text-green-600" />}
+                          {category === 'advanced' && <Sparkles className="w-5 h-5 text-purple-600" />}
+                          {lang === 'ar' 
+                            ? (category === 'core' ? 'المميزات الأساسية' : category === 'business' ? 'مميزات الأعمال' : 'المميزات المتقدمة')
+                            : (category === 'core' ? 'Core Features' : category === 'business' ? 'Business Features' : 'Advanced Features')
+                          }
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {featureOptions
+                            .filter(feature => feature.category === category)
+                            .map((feature) => {
+                              const Icon = feature.icon;
+                              const isSelected = projectDetails.features.includes(feature.id);
+                              return (
+                                <motion.div
+                                  key={feature.id}
+                                  className={cn(
+                                    "flex items-start gap-4 p-4 rounded-lg border transition-all",
+                                    isSelected
+                                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                                      : "border-gray-200 dark:border-gray-700"
+                                  )}
+                                  data-testid={`feature-${feature.id}`}
+                                >
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={(checked) => 
+                                      handleFeatureToggle(feature.id, !!checked)
+                                    }
+                                    disabled={feature.required}
+                                    className="mt-1"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="flex items-start gap-3">
+                                      <Icon className="w-5 h-5 text-blue-600 mt-0.5" />
+                                      <div>
+                                        <h5 className="font-medium flex items-center gap-2">
+                                          {lang === 'ar' ? feature.titleAr : feature.title}
+                                          {feature.required && (
+                                            <Badge variant="secondary" className="text-xs">
+                                              {lang === 'ar' ? 'مطلوب' : 'Required'}
+                                            </Badge>
+                                          )}
+                                        </h5>
+                                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                          {lang === 'ar' ? feature.descriptionAr : feature.description}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Step 3: Project Details */}
+                {currentStep === 3 && (
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-semibold mb-6 text-center">
+                      {lang === 'ar' ? 'أخبرنا عن مشروعك' : 'Tell Us About Your Project'}
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="projectName">
+                          {lang === 'ar' ? 'اسم المشروع *' : 'Project Name *'}
+                        </Label>
+                        <Input
+                          id="projectName"
+                          value={projectDetails.projectName}
+                          onChange={(e) => setProjectDetails(prev => ({ ...prev, projectName: e.target.value }))}
+                          placeholder={lang === 'ar' ? 'أدخل اسم المشروع' : 'Enter project name'}
+                          className="mt-2"
+                          data-testid="input-project-name"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="timeline">
+                          {lang === 'ar' ? 'الإطار الزمني المتوقع' : 'Expected Timeline'}
+                        </Label>
+                        <Select onValueChange={(value) => setProjectDetails(prev => ({ ...prev, timeline: value }))}>
+                          <SelectTrigger className="mt-2" data-testid="select-timeline">
+                            <SelectValue placeholder={lang === 'ar' ? 'اختر الإطار الزمني' : 'Select timeline'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1-2-months">{lang === 'ar' ? '1-2 شهر' : '1-2 months'}</SelectItem>
+                            <SelectItem value="3-4-months">{lang === 'ar' ? '3-4 أشهر' : '3-4 months'}</SelectItem>
+                            <SelectItem value="5-6-months">{lang === 'ar' ? '5-6 أشهر' : '5-6 months'}</SelectItem>
+                            <SelectItem value="6-plus-months">{lang === 'ar' ? 'أكثر من 6 أشهر' : '6+ months'}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     <div>
-                      <Label htmlFor="projectDescription">وصف المشروع *</Label>
+                      <Label htmlFor="projectDescription">
+                        {lang === 'ar' ? 'وصف المشروع *' : 'Project Description *'}
+                      </Label>
                       <Textarea
                         id="projectDescription"
-                        data-testid="input-project-description"
                         value={projectDetails.projectDescription}
-                        onChange={(e) => setProjectDetails(prev => ({...prev, projectDescription: e.target.value}))}
-                        placeholder="اشرح فكرة مشروعك بالتفصيل..."
-                        className="mt-2"
+                        onChange={(e) => setProjectDetails(prev => ({ ...prev, projectDescription: e.target.value }))}
+                        placeholder={lang === 'ar' ? 'أخبرنا المزيد عن فكرة تطبيقك ومميزاته وأهدافك' : 'Tell us more about your app idea, features, and goals'}
                         rows={4}
+                        className="mt-2"
+                        data-testid="textarea-project-description"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="timeline">الإطار الزمني المطلوب</Label>
-                      <Select onValueChange={(value) => setProjectDetails(prev => ({...prev, timeline: value}))}>
-                        <SelectTrigger className="mt-2">
-                          <SelectValue placeholder="حدد الإطار الزمني" />
+                      <Label htmlFor="budget">
+                        {lang === 'ar' ? 'الميزانية المتوقعة' : 'Expected Budget'}
+                      </Label>
+                      <Select onValueChange={(value) => setProjectDetails(prev => ({ ...prev, budget: value }))}>
+                        <SelectTrigger className="mt-2" data-testid="select-budget">
+                          <SelectValue placeholder={lang === 'ar' ? 'اختر الميزانية' : 'Select budget range'} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="urgent">عاجل (أقل من شهر)</SelectItem>
-                          <SelectItem value="1-2months">1-2 شهر</SelectItem>
-                          <SelectItem value="2-4months">2-4 أشهر</SelectItem>
-                          <SelectItem value="flexible">مرن</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="budget">الميزانية المتاحة</Label>
-                      <Select onValueChange={(value) => setProjectDetails(prev => ({...prev, budget: value}))}>
-                        <SelectTrigger className="mt-2">
-                          <SelectValue placeholder="حدد نطاق الميزانية" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5000-15000">5,000 - 15,000 ريال</SelectItem>
-                          <SelectItem value="15000-30000">15,000 - 30,000 ريال</SelectItem>
-                          <SelectItem value="30000-50000">30,000 - 50,000 ريال</SelectItem>
-                          <SelectItem value="50000+">أكثر من 50,000 ريال</SelectItem>
-                          <SelectItem value="custom">ميزانية مخصصة</SelectItem>
+                          <SelectItem value="5k-10k">$5,000 - $10,000</SelectItem>
+                          <SelectItem value="10k-25k">$10,000 - $25,000</SelectItem>
+                          <SelectItem value="25k-50k">$25,000 - $50,000</SelectItem>
+                          <SelectItem value="50k-plus">$50,000+</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
+                )}
 
-                  {/* Contact Information */}
+                {/* Step 4: File Upload */}
+                {currentStep === 4 && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-6 text-center">
+                      {lang === 'ar' ? 'ارفع الملفات ذات الصلة' : 'Upload Relevant Files'}
+                    </h3>
+                    <p className="text-center text-gray-600 dark:text-gray-300 mb-8">
+                      {lang === 'ar' 
+                        ? 'يمكنك رفع أي مستندات، تصاميم، أو ملفات أخرى تساعدنا في فهم مشروعك بشكل أفضل'
+                        : 'Upload any documents, designs, or other files that help us understand your project better'
+                      }
+                    </p>
+
+                    <div 
+                      className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                      data-testid="file-upload-area"
+                    >
+                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-lg font-medium mb-2">
+                        {lang === 'ar' ? 'انقر لرفع الملفات أو اسحب الملفات هنا' : 'Click to upload files or drag files here'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {lang === 'ar' ? 'يدعم: PDF, DOC, DOCX, JPG, PNG, ZIP (الحد الأقصى: 10 ملفات، 5MB لكل ملف)' : 'Supported: PDF, DOC, DOCX, JPG, PNG, ZIP (Max: 10 files, 5MB each)'}
+                      </p>
+                    </div>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      data-testid="file-input"
+                    />
+
+                    {uploadedFiles.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="font-medium mb-4">
+                          {lang === 'ar' ? 'الملفات المرفوعة:' : 'Uploaded Files:'}
+                        </h4>
+                        <div className="space-y-3">
+                          {uploadedFiles.map((file, index) => (
+                            <motion.div
+                              key={index}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg p-4"
+                              data-testid={`uploaded-file-${index}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <FileText className="w-5 h-5 text-blue-600" />
+                                <div>
+                                  <p className="font-medium">{file.name}</p>
+                                  <p className="text-sm text-gray-500">
+                                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFile(index)}
+                                data-testid={`remove-file-${index}`}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 5: Contact Information */}
+                {currentStep === 5 && (
                   <div className="space-y-6">
-                    <h3 className="text-xl font-bold text-gray-900 flex items-center">
-                      <Users className="w-5 h-5 text-primary mr-2" />
-                      بيانات التواصل
+                    <h3 className="text-xl font-semibold mb-6 text-center">
+                      {lang === 'ar' ? 'معلومات التواصل' : 'Contact Information'}
                     </h3>
                     
-                    <div>
-                      <Label htmlFor="contactName">اسم المسؤول *</Label>
-                      <Input
-                        id="contactName"
-                        data-testid="input-contact-name"
-                        value={projectDetails.contactName}
-                        onChange={(e) => setProjectDetails(prev => ({...prev, contactName: e.target.value}))}
-                        placeholder="الاسم الكامل"
-                        className="mt-2"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="contactName">
+                          {lang === 'ar' ? 'الاسم الكامل *' : 'Full Name *'}
+                        </Label>
+                        <Input
+                          id="contactName"
+                          value={projectDetails.contactName}
+                          onChange={(e) => setProjectDetails(prev => ({ ...prev, contactName: e.target.value }))}
+                          placeholder={lang === 'ar' ? 'أدخل اسمك الكامل' : 'Enter your full name'}
+                          className="mt-2"
+                          data-testid="input-contact-name"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="contactPhone">
+                          {lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
+                        </Label>
+                        <Input
+                          id="contactPhone"
+                          type="tel"
+                          value={projectDetails.contactPhone}
+                          onChange={(e) => setProjectDetails(prev => ({ ...prev, contactPhone: e.target.value }))}
+                          placeholder={lang === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
+                          className="mt-2"
+                          data-testid="input-contact-phone"
+                        />
+                      </div>
                     </div>
 
                     <div>
-                      <Label htmlFor="contactEmail">البريد الإلكتروني *</Label>
+                      <Label htmlFor="contactEmail">
+                        {lang === 'ar' ? 'البريد الإلكتروني *' : 'Email Address *'}
+                      </Label>
                       <Input
                         id="contactEmail"
-                        data-testid="input-contact-email"
                         type="email"
                         value={projectDetails.contactEmail}
-                        onChange={(e) => setProjectDetails(prev => ({...prev, contactEmail: e.target.value}))}
-                        placeholder="example@email.com"
+                        onChange={(e) => setProjectDetails(prev => ({ ...prev, contactEmail: e.target.value }))}
+                        placeholder={lang === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
                         className="mt-2"
+                        data-testid="input-contact-email"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="contactPhone">رقم الجوال</Label>
-                      <Input
-                        id="contactPhone"
-                        value={projectDetails.contactPhone}
-                        onChange={(e) => setProjectDetails(prev => ({...prev, contactPhone: e.target.value}))}
-                        placeholder="+966 50 123 4567"
-                        className="mt-2"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="additionalNotes">ملاحظات إضافية</Label>
+                      <Label htmlFor="additionalNotes">
+                        {lang === 'ar' ? 'ملاحظات إضافية' : 'Additional Notes'}
+                      </Label>
                       <Textarea
                         id="additionalNotes"
                         value={projectDetails.additionalNotes}
-                        onChange={(e) => setProjectDetails(prev => ({...prev, additionalNotes: e.target.value}))}
-                        placeholder="أي معلومات إضافية مهمة..."
-                        className="mt-2"
+                        onChange={(e) => setProjectDetails(prev => ({ ...prev, additionalNotes: e.target.value }))}
+                        placeholder={lang === 'ar' ? 'أي ملاحظات أو متطلبات إضافية' : 'Any additional notes or requirements'}
                         rows={3}
+                        className="mt-2"
+                        data-testid="textarea-additional-notes"
                       />
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* Step 5: Files Upload */}
-            {currentStep === 5 && (
-              <div className="p-8">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                    رفع الملفات والمراجع
-                  </h2>
-                  <p className="text-gray-600">
-                    ارفع أي ملفات مرجعية تساعد في فهم مشروعك
-                  </p>
-                </div>
-
-                <div className="max-w-2xl mx-auto">
-                  {/* File Upload Area */}
-                  <motion.div
-                    className="border-2 border-dashed border-primary/30 rounded-2xl p-12 text-center bg-primary/5 hover:bg-primary/10 transition-colors duration-300"
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => fileInputRef.current?.click()}
-                    data-testid="button-upload-files"
-                  >
-                    <Upload className="w-16 h-16 text-primary mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      اسحب الملفات هنا أو انقر للتحديد
+                {/* Step 6: Review & Submit */}
+                {currentStep === 6 && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-6 text-center">
+                      {lang === 'ar' ? 'مراجعة وتأكيد الطلب' : 'Review & Submit Request'}
                     </h3>
-                    <p className="text-gray-600 mb-4">
-                      يمكنك رفع الصور، ملفات PDF، Word، أو أي مستندات مرجعية
-                    </p>
-                    <Button variant="outline" className="mt-4">
-                      <Upload className="w-4 h-4 mr-2" />
-                      اختيار الملفات
-                    </Button>
-                  </motion.div>
+                    
+                    <div className="space-y-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">
+                            {lang === 'ar' ? 'ملخص المشروع' : 'Project Summary'}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-500">
+                              {lang === 'ar' ? 'نوع التطبيق' : 'App Type'}
+                            </Label>
+                            <p className="mt-1">
+                              {appTypes.find(t => t.id === projectDetails.appType)?.[lang === 'ar' ? 'titleAr' : 'title']}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-sm font-medium text-gray-500">
+                              {lang === 'ar' ? 'المنصات' : 'Platforms'}
+                            </Label>
+                            <p className="mt-1">
+                              {projectDetails.platforms.map(p => 
+                                platformOptions.find(opt => opt.id === p)?.[lang === 'ar' ? 'titleAr' : 'title']
+                              ).join(', ')}
+                            </p>
+                          </div>
 
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.txt"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-
-                  {/* Uploaded Files List */}
-                  {projectDetails.files.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-8"
-                    >
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                        الملفات المرفوعة ({projectDetails.files.length})
-                      </h3>
-                      <div className="space-y-3">
-                        {projectDetails.files.map((file, index) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                          >
-                            <FileText className="w-5 h-5 text-primary flex-shrink-0" />
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900">{file.name}</p>
-                              <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-500">
+                              {lang === 'ar' ? 'المميزات المختارة' : 'Selected Features'}
+                            </Label>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {projectDetails.features.map(featureId => {
+                                const feature = featureOptions.find(f => f.id === featureId);
+                                return feature ? (
+                                  <Badge key={featureId} variant="secondary">
+                                    {lang === 'ar' ? feature.titleAr : feature.title}
+                                  </Badge>
+                                ) : null;
+                              })}
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeFile(index)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
+                          </div>
 
-                  {/* File Upload Tips */}
-                  <div className="mt-8 p-6 bg-blue-50 rounded-xl">
-                    <h4 className="font-semibold text-blue-900 mb-3">نصائح لرفع الملفات:</h4>
-                    <ul className="text-blue-700 text-sm space-y-2">
-                      <li className="flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-                        صور توضيحية لتصميم التطبيق المطلوب
-                      </li>
-                      <li className="flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-                        مستندات تحدد متطلبات العمل
-                      </li>
-                      <li className="flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-                        أمثلة على تطبيقات مشابهة (screenshots)
-                      </li>
-                      <li className="flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-                        شعار الشركة أو الهوية البصرية
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
+                          <div>
+                            <Label className="text-sm font-medium text-gray-500">
+                              {lang === 'ar' ? 'اسم المشروع' : 'Project Name'}
+                            </Label>
+                            <p className="mt-1">{projectDetails.projectName}</p>
+                          </div>
 
-            {/* Step 6: Review and Submit */}
-            {currentStep === 6 && (
-              <div className="p-8">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                    مراجعة طلب المشروع
-                  </h2>
-                  <p className="text-gray-600">
-                    تأكد من جميع التفاصيل قبل إرسال الطلب
-                  </p>
-                </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-500">
+                              {lang === 'ar' ? 'وصف المشروع' : 'Project Description'}
+                            </Label>
+                            <p className="mt-1">{projectDetails.projectDescription}</p>
+                          </div>
 
-                <div className="max-w-4xl mx-auto space-y-8">
-                  {/* Project Summary */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <FileText className="w-5 h-5 text-primary mr-2" />
-                        ملخص المشروع
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <span className="font-medium text-gray-700">نوع التطبيق:</span>
-                        <span className="mr-2">
-                          {appTypes.find(t => t.id === projectDetails.appType)?.title || 'غير محدد'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-700">المنصات:</span>
-                        <span className="mr-2">
-                          {projectDetails.platforms.map(p => 
-                            platformOptions.find(opt => opt.id === p)?.title
-                          ).join(', ') || 'غير محدد'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-700">عدد الميزات:</span>
-                        <span className="mr-2">{projectDetails.features.length} ميزة</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-700">اسم المشروع:</span>
-                        <span className="mr-2">{projectDetails.projectName || 'غير محدد'}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                          {projectDetails.timeline && (
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">
+                                {lang === 'ar' ? 'الإطار الزمني' : 'Timeline'}
+                              </Label>
+                              <p className="mt-1">{projectDetails.timeline}</p>
+                            </div>
+                          )}
 
-                  {/* Features List */}
-                  {projectDetails.features.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <Star className="w-5 h-5 text-primary mr-2" />
-                          الميزات المحددة
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid md:grid-cols-2 gap-3">
-                          {projectDetails.features.map(featureId => {
-                            const feature = featureOptions.find(f => f.id === featureId);
-                            const IconComponent = feature?.icon || CheckCircle;
-                            return (
-                              <div key={featureId} className="flex items-center gap-2">
-                                <IconComponent className="w-4 h-4 text-primary" />
-                                <span className="text-sm text-gray-700">{feature?.title}</span>
+                          {projectDetails.budget && (
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">
+                                {lang === 'ar' ? 'الميزانية' : 'Budget'}
+                              </Label>
+                              <p className="mt-1">{projectDetails.budget}</p>
+                            </div>
+                          )}
+
+                          {uploadedFiles.length > 0 && (
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">
+                                {lang === 'ar' ? 'الملفات المرفقة' : 'Attached Files'}
+                              </Label>
+                              <div className="mt-2 space-y-1">
+                                {uploadedFiles.map((file, index) => (
+                                  <p key={index} className="text-sm text-blue-600">
+                                    {file.name}
+                                  </p>
+                                ))}
                               </div>
-                            );
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                            </div>
+                          )}
 
-                  {/* Files Summary */}
-                  {projectDetails.files.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <Upload className="w-5 h-5 text-primary mr-2" />
-                          الملفات المرفقة
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-sm text-gray-600">
-                          تم رفع {projectDetails.files.length} ملف بنجاح
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                          <Separator />
 
-                  {/* Submit Button */}
-                  <motion.div
-                    className="text-center"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <Button
-                      size="lg"
-                      onClick={handleSubmitProject}
-                      className="px-12 py-4 text-lg"
-                      data-testid="button-submit-project"
-                    >
-                      <Send className="w-5 h-5 mr-2" />
-                      إرسال طلب المشروع
-                    </Button>
-                    <p className="text-sm text-gray-500 mt-4">
-                      سيتم التواصل معك خلال 24 ساعة لمناقشة التفاصيل
-                    </p>
-                  </motion.div>
-                </div>
-              </div>
-            )}
+                          <div>
+                            <Label className="text-sm font-medium text-gray-500">
+                              {lang === 'ar' ? 'معلومات التواصل' : 'Contact Information'}
+                            </Label>
+                            <div className="mt-2 space-y-1">
+                              <p><strong>{lang === 'ar' ? 'الاسم:' : 'Name:'}</strong> {projectDetails.contactName}</p>
+                              <p><strong>{lang === 'ar' ? 'البريد الإلكتروني:' : 'Email:'}</strong> {projectDetails.contactEmail}</p>
+                              {projectDetails.contactPhone && (
+                                <p><strong>{lang === 'ar' ? 'الهاتف:' : 'Phone:'}</strong> {projectDetails.contactPhone}</p>
+                              )}
+                            </div>
+                          </div>
 
-            {/* Navigation Footer */}
-            <div className="flex justify-between items-center p-6 border-t border-gray-100 bg-gray-50">
+                          {projectDetails.additionalNotes && (
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">
+                                {lang === 'ar' ? 'ملاحظات إضافية' : 'Additional Notes'}
+                              </Label>
+                              <p className="mt-1">{projectDetails.additionalNotes}</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 text-center">
+                        <h4 className="font-semibold mb-2">
+                          {lang === 'ar' ? 'الخطوة التالية' : 'Next Steps'}
+                        </h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          {lang === 'ar' 
+                            ? 'بعد إرسال الطلب، سيقوم فريقنا المختص بمراجعة تفاصيل مشروعك والتواصل معك خلال 24 ساعة لمناقشة التفاصيل وتقديم عرض مخصص.'
+                            : 'After submitting your request, our specialized team will review your project details and contact you within 24 hours to discuss specifics and provide a customized proposal.'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between mt-8">
               <Button
                 variant="outline"
-                onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-                data-testid="button-previous-step"
-                disabled={currentStep === 1}
-                className="flex items-center"
+                onClick={handlePrevious}
+                disabled={currentStep === 0}
+                className="flex items-center gap-2"
+                data-testid="button-previous"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                السابق
+                <ArrowLeft className={cn("w-4 h-4", dir === 'rtl' && "rotate-180")} />
+                {lang === 'ar' ? 'السابق' : 'Previous'}
               </Button>
 
-              <div className="text-sm text-gray-500">
-                {currentStep} من {planningSteps.length}
-              </div>
-
-              {currentStep < 6 && (
+              {currentStep < steps.length - 1 ? (
                 <Button
-                  onClick={() => setCurrentStep(currentStep + 1)}
-                  data-testid="button-next-step"
-                  disabled={!canProceedToNext()}
-                  className="flex items-center"
+                  onClick={handleNext}
+                  disabled={!isStepValid(currentStep)}
+                  className="flex items-center gap-2"
+                  data-testid="button-next"
                 >
-                  التالي
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  {lang === 'ar' ? 'التالي' : 'Next'}
+                  <ArrowRight className={cn("w-4 h-4", dir === 'rtl' && "rotate-180")} />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!isStepValid(currentStep) || isSubmitting}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                  data-testid="button-submit"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      {lang === 'ar' ? 'جاري الإرسال...' : 'Submitting...'}
+                    </>
+                  ) : (
+                    <>
+                      <Send className={cn("w-4 h-4", dir === 'rtl' && "rotate-180")} />
+                      {lang === 'ar' ? 'إرسال الطلب' : 'Submit Request'}
+                    </>
+                  )}
                 </Button>
               )}
-
-              {currentStep === 6 && (
-                <div className="w-20" /> // Spacer to balance layout
-              )}
             </div>
-          </motion.div>
-        </AnimatePresence>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
