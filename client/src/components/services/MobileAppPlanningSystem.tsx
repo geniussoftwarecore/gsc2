@@ -466,10 +466,16 @@ export default function MobileAppPlanningSystem() {
   // Mutation for submitting the form
   const submitMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      return await apiRequest('/api/mobile-app-orders', {
+      const response = await fetch('/api/mobile-app-orders', {
         method: 'POST',
         body: formData,
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit request');
+      }
+      
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
