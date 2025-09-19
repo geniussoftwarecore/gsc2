@@ -618,10 +618,10 @@ export default function MobileAppPlanningSystem() {
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm rounded-3xl p-8"
+                className="bg-gradient-to-br from-sky-400/30 to-blue-500/20 backdrop-blur-sm rounded-3xl p-8 border border-sky-300/20 shadow-lg shadow-blue-500/25"
                 data-testid="icon-mobile-central"
               >
-                <Smartphone className="w-24 h-24 text-white" />
+                <Smartphone className="w-24 h-24 text-white drop-shadow-lg" />
               </motion.div>
 
               {/* Interactive Android Icon */}
